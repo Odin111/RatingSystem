@@ -254,12 +254,14 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     const logout = () => {
-        currentUser = null;
-        localStorage.removeItem('ratingSystem_currentUser');
-        app.auth.loginForm.reset();
-        if(app.auth.registerForm) app.auth.registerForm.reset();
-        showToast('Logged out');
-        checkAuthStatus();
+        showConfirm('Logout', 'Are you sure you want to log out?', () => {
+            currentUser = null;
+            localStorage.removeItem('ratingSystem_currentUser');
+            app.auth.loginForm.reset();
+            if(app.auth.registerForm) app.auth.registerForm.reset();
+            showToast('Logged out');
+            checkAuthStatus();
+        });
     };
 
     app.employee.logoutBtn.addEventListener('click', logout);
@@ -727,25 +729,27 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        const users = JSON.parse(localStorage.getItem('ratingSystem_users'));
-        const userIndex = users.findIndex(u => u.username === currentUser.username);
+        showConfirm('Save Changes', 'Are you sure you want to update your profile?', () => {
+            const users = JSON.parse(localStorage.getItem('ratingSystem_users'));
+            const userIndex = users.findIndex(u => u.username === currentUser.username);
 
-        if (userIndex !== -1) {
-            users[userIndex].fullName = newFullName;
-            currentUser.fullName = newFullName;
+            if (userIndex !== -1) {
+                users[userIndex].fullName = newFullName;
+                currentUser.fullName = newFullName;
 
-            if (newPassword) {
-                users[userIndex].password = newPassword;
-                currentUser.password = newPassword;
+                if (newPassword) {
+                    users[userIndex].password = newPassword;
+                    currentUser.password = newPassword;
+                }
+
+                localStorage.setItem('ratingSystem_users', JSON.stringify(users));
+                localStorage.setItem('ratingSystem_currentUser', JSON.stringify(currentUser));
+                showToast('Profile updated successfully!');
+                checkAuthStatus(); // Go back
+            } else {
+                showToast('Error updating profile', 'error');
             }
-
-            localStorage.setItem('ratingSystem_users', JSON.stringify(users));
-            localStorage.setItem('ratingSystem_currentUser', JSON.stringify(currentUser));
-            showToast('Profile updated successfully!');
-            checkAuthStatus(); // Go back
-        } else {
-            showToast('Error updating profile', 'error');
-        }
+        });
     });
 
     app.settings.deleteBtn.addEventListener('click', () => {

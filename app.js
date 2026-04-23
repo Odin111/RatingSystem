@@ -39,7 +39,14 @@ document.addEventListener('DOMContentLoaded', () => {
             uniqueCount: document.getElementById('unique-applicants-count'),
             avgCount: document.getElementById('avg-score-count'),
             emptyState: document.getElementById('no-ratings-msg'),
-            settingsBtn: document.getElementById('admin-settings')
+            settingsBtn: document.getElementById('admin-settings'),
+            historyBtn: document.getElementById('history-btn'),
+            historyModal: document.getElementById('history-modal'),
+            historyClose: document.querySelector('#history-modal .close-modal'),
+            historyTbody: document.getElementById('history-tbody'),
+            restoreAllBtn: document.getElementById('restore-all-btn'),
+            deleteAllHistoryBtn: document.getElementById('delete-all-history-btn'),
+            noHistoryMsg: document.getElementById('no-history-msg')
         },
         modal: {
             el: document.getElementById('details-modal'),
@@ -103,6 +110,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize ratings if empty
     if (!localStorage.getItem('ratingSystem_ratings')) {
         localStorage.setItem('ratingSystem_ratings', JSON.stringify([]));
+    }
+    if (!localStorage.getItem('ratingSystem_deletedRatings')) {
+        localStorage.setItem('ratingSystem_deletedRatings', JSON.stringify([]));
     }
 
     // ---- Utility Functions ----
@@ -495,7 +505,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td>${rating.position}</td>
                 <td style="color: ${scoreColor}; font-weight: bold;">${rating.totalScore} / ${rating.maxScore}</td>
                 <td>
-                    <button class="btn outline-btn view-btn" data-id="${rating.id}">View Details</button>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <button class="btn outline-btn view-btn" data-id="${rating.id}">View Details</button>
+                        <button class="btn danger-btn delete-btn" data-id="${rating.id}" style="padding: 8px 12px;"><i class='bx bx-trash'></i></button>
+                    </div>
                 </td>
             `;
             app.admin.tbody.appendChild(tr);
@@ -505,13 +518,147 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('.view-btn').forEach(btn => {
             btn.addEventListener('click', (e) => openDetailsModal(e.currentTarget.getAttribute('data-id')));
         });
+        document.querySelectorAll('.delete-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => deleteRating(e.currentTarget.getAttribute('data-id')));
+        });
+    };
+
+    const deleteRating = (id) => {
+        showConfirm('Delete Rating', 'Are you sure you want to delete this rating? It will be moved to history.', () => {
+            const ratings = JSON.parse(localStorage.getItem('ratingSystem_ratings'));
+            const deletedRatings = JSON.parse(localStorage.getItem('ratingSystem_deletedRatings')) || [];
+            
+            const ratingIndex = ratings.findIndex(r => r.id === id);
+            if (ratingIndex > -1) {
+                const deleted = ratings.splice(ratingIndex, 1)[0];
+                deletedRatings.push(deleted);
+                localStorage.setItem('ratingSystem_ratings', JSON.stringify(ratings));
+                localStorage.setItem('ratingSystem_deletedRatings', JSON.stringify(deletedRatings));
+                renderAdminTable();
+                showToast('Rating moved to history.', 'success');
+            }
+        });
     };
 
     app.admin.clearBtn.addEventListener('click', () => {
-        showConfirm('Clear All Data', 'Are you sure you want to permanently delete all submitted ratings? This cannot be undone.', () => {
+        showConfirm('Clear All Data', 'Are you sure you want to delete all submitted ratings? They will be moved to history.', () => {
+            const ratings = JSON.parse(localStorage.getItem('ratingSystem_ratings'));
+            const deletedRatings = JSON.parse(localStorage.getItem('ratingSystem_deletedRatings')) || [];
+            
+            deletedRatings.push(...ratings);
             localStorage.setItem('ratingSystem_ratings', JSON.stringify([]));
+            localStorage.setItem('ratingSystem_deletedRatings', JSON.stringify(deletedRatings));
+            
             renderAdminTable();
-            showToast('All ratings cleared.', 'success');
+            showToast('All ratings moved to history.', 'success');
+        });
+    });
+
+    const renderHistoryTable = () => {
+        const deletedRatings = JSON.parse(localStorage.getItem('ratingSystem_deletedRatings')) || [];
+        app.admin.historyTbody.innerHTML = '';
+        
+        if (deletedRatings.length === 0) {
+            app.admin.noHistoryMsg.classList.remove('hidden');
+            app.admin.historyTbody.parentElement.classList.add('hidden');
+            return;
+        }
+
+        app.admin.noHistoryMsg.classList.add('hidden');
+        app.admin.historyTbody.parentElement.classList.remove('hidden');
+
+        deletedRatings.sort((a, b) => b.id - a.id).forEach(rating => {
+            const tr = document.createElement('tr');
+            
+            let scoreColor = 'var(--text-primary)';
+            if (rating.totalScore >= 16) scoreColor = 'var(--success)';
+            else if (rating.totalScore <= 10) scoreColor = 'var(--accent-color)';
+
+            tr.innerHTML = `
+                <td>${rating.date}</td>
+                <td>${rating.rater}</td>
+                <td>${rating.applicant}</td>
+                <td style="color: ${scoreColor}; font-weight: bold;">${rating.totalScore} / ${rating.maxScore}</td>
+                <td>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <button class="btn outline-btn restore-btn" data-id="${rating.id}" style="padding: 8px 12px;"><i class='bx bx-undo'></i></button>
+                        <button class="btn danger-btn perm-delete-btn" data-id="${rating.id}" style="padding: 8px 12px;"><i class='bx bx-trash'></i></button>
+                    </div>
+                </td>
+            `;
+            app.admin.historyTbody.appendChild(tr);
+        });
+
+        document.querySelectorAll('.restore-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => restoreRating(e.currentTarget.getAttribute('data-id')));
+        });
+        document.querySelectorAll('.perm-delete-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => permDeleteRating(e.currentTarget.getAttribute('data-id')));
+        });
+    };
+
+    const restoreRating = (id) => {
+        showConfirm('Restore Rating', 'Are you sure you want to restore this rating?', () => {
+            const ratings = JSON.parse(localStorage.getItem('ratingSystem_ratings'));
+            const deletedRatings = JSON.parse(localStorage.getItem('ratingSystem_deletedRatings')) || [];
+            
+            const ratingIndex = deletedRatings.findIndex(r => r.id === id);
+            if (ratingIndex > -1) {
+                const restored = deletedRatings.splice(ratingIndex, 1)[0];
+                ratings.push(restored);
+                localStorage.setItem('ratingSystem_ratings', JSON.stringify(ratings));
+                localStorage.setItem('ratingSystem_deletedRatings', JSON.stringify(deletedRatings));
+                renderHistoryTable();
+                renderAdminTable();
+                showToast('Rating restored successfully.', 'success');
+            }
+        });
+    };
+
+    const permDeleteRating = (id) => {
+        showConfirm('Delete Permanently', 'Are you sure you want to permanently delete this rating? This cannot be undone.', () => {
+            const deletedRatings = JSON.parse(localStorage.getItem('ratingSystem_deletedRatings')) || [];
+            const filtered = deletedRatings.filter(r => r.id !== id);
+            localStorage.setItem('ratingSystem_deletedRatings', JSON.stringify(filtered));
+            renderHistoryTable();
+            showToast('Rating permanently deleted.', 'success');
+        });
+    };
+
+    app.admin.historyBtn.addEventListener('click', () => {
+        renderHistoryTable();
+        app.admin.historyModal.classList.add('show');
+    });
+
+    if(app.admin.historyClose) {
+        app.admin.historyClose.addEventListener('click', () => {
+            app.admin.historyModal.classList.remove('show');
+        });
+    }
+
+    app.admin.restoreAllBtn.addEventListener('click', () => {
+        const deletedRatings = JSON.parse(localStorage.getItem('ratingSystem_deletedRatings')) || [];
+        if (deletedRatings.length === 0) return;
+
+        showConfirm('Restore All', 'Are you sure you want to restore all deleted ratings?', () => {
+            const ratings = JSON.parse(localStorage.getItem('ratingSystem_ratings'));
+            ratings.push(...deletedRatings);
+            localStorage.setItem('ratingSystem_ratings', JSON.stringify(ratings));
+            localStorage.setItem('ratingSystem_deletedRatings', JSON.stringify([]));
+            renderHistoryTable();
+            renderAdminTable();
+            showToast('All ratings restored.', 'success');
+        });
+    });
+
+    app.admin.deleteAllHistoryBtn.addEventListener('click', () => {
+        const deletedRatings = JSON.parse(localStorage.getItem('ratingSystem_deletedRatings')) || [];
+        if (deletedRatings.length === 0) return;
+
+        showConfirm('Delete All Permanently', 'Are you sure you want to permanently delete all history? This cannot be undone.', () => {
+            localStorage.setItem('ratingSystem_deletedRatings', JSON.stringify([]));
+            renderHistoryTable();
+            showToast('History cleared permanently.', 'success');
         });
     });
 
@@ -559,6 +706,9 @@ document.addEventListener('DOMContentLoaded', () => {
     window.addEventListener('click', (e) => {
         if (e.target === app.modal.el) {
             app.modal.el.classList.remove('show');
+        }
+        if (app.admin.historyModal && e.target === app.admin.historyModal) {
+            app.admin.historyModal.classList.remove('show');
         }
     });
 

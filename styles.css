@@ -700,5 +700,71 @@ tfoot {
     .navbar {
         flex-direction: column;
         gap: 16px;
+        text-align: center;
+    }
+    
+    .nav-user {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .dashboard-content {
+        padding: 0 10px 20px;
+    }
+
+    .auth-card, .rating-card, .summary-card, .ratings-container {
+        padding: 20px 15px;
+    }
+
+    .admin-header-actions {
+        flex-direction: column;
+        align-items: flex-start !important;
+        gap: 15px;
+    }
+    
+    .admin-header-actions > div {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .admin-header-actions .btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .modal-content {
+        padding: 20px 15px;
+        width: 95%;
+    }
+
+    th, td {
+        padding: 10px 12px;
+        font-size: 0.85rem;
+    }
+
+    .detail-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 6px;
+    }
+
+    .import-header-row {
+        flex-direction: column;
+        align-items: stretch !important;
+        gap: 15px;
+    }
+    
+    .import-header-row .btn {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .toast {
+        width: 90%;
+        left: 5%;
+        right: 5%;
+        bottom: 20px;
+        text-align: center;
     }
 }

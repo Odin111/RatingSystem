@@ -11,8 +11,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <!-- Boxicons for modern icons -->
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
-    <!-- SheetJS for Excel Import -->
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -101,28 +99,6 @@
                 </div>
             </nav>
             <main class="dashboard-content">
-                <div class="import-section glass-panel" style="flex-direction: column; align-items: flex-start; gap: 15px;">
-                    <div class="import-header-row">
-                        <div class="import-info">
-                            <h3><i class='bx bx-file'></i> Import from Excel</h3>
-                            <p>Upload a properly formatted Excel (.xlsx) or CSV file to auto-fill the form.</p>
-                        </div>
-                        <label for="excel-import" class="btn outline-btn"><i class='bx bx-upload'></i> Select File</label>
-                        <input type="file" id="excel-import" accept=".xlsx, .xls, .csv" class="hidden">
-                    </div>
-                    <div class="import-requirements" style="font-size: 0.85rem; color: var(--text-muted); background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; width: 100%;">
-                        <strong style="color: var(--text-secondary);"><i class='bx bx-info-circle'></i> Required Format:</strong>
-                        <ul style="margin-top: 8px; margin-left: 20px; line-height: 1.6;">
-                            <li><strong>Row 1:</strong> Position</li>
-                            <li><strong>Row 2:</strong> Applicant Name</li>
-                            <li><strong>Row 4-14:</strong> The 11 Criteria in exact order (e.g. Communication Skills must be Row 4, Leadership must be Row 5, etc.)</li>
-                            <li><strong>Column A:</strong> Contains the Criteria Names</li>
-                            <li><strong>Column B:</strong> Contains the Points (Max Score)</li>
-                            <li><strong>Column C:</strong> Contains the numerical Ratings</li>
-                        </ul>
-                    </div>
-                </div>
-                
                 <div class="rating-card glass-panel">
                     <div class="rating-header">
                         <h2>Applicant Rating Form</h2>

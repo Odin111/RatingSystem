@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Premium Rating System</title>
+    <meta name="description" content="A premium rating system for applicant evaluation.">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Boxicons for modern icons -->
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+    <!-- SheetJS for Excel Import -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Login View -->
+        <div id="login-view" class="view active">
+            <div class="auth-container">
+                <div class="auth-card glass-panel">
+                    <div class="auth-header">
+                        <h2><i class='bx bx-log-in-circle'></i> Sign In</h2>
+                        <p>Welcome back to Rating System</p>
+                    </div>
+                    <form id="login-form">
+                        <div class="input-group">
+                            <label for="login-username">Username</label>
+                            <div class="input-wrapper">
+                                <i class='bx bx-user'></i>
+                                <input type="text" id="login-username" required placeholder="Enter username">
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <label for="login-password">Password</label>
+                            <div class="input-wrapper">
+                                <i class='bx bx-lock-alt'></i>
+                                <input type="password" id="login-password" required placeholder="Enter password">
+                                <button type="button" class="toggle-password" tabindex="-1"><i class='bx bx-show'></i></button>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn primary-btn" style="width: 100%; margin-top: 10px;">Login</button>
+                    </form>
+                    <div class="auth-footer">
+                        <p>Don't have an account? <button id="go-to-register" class="btn outline-btn" style="padding: 5px 10px; margin-left: 10px;">Register</button></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Register View -->
+        <div id="register-view" class="view">
+            <div class="auth-container">
+                <div class="auth-card glass-panel" style="border-top: 4px solid var(--secondary-color);">
+                    <div class="auth-header">
+                        <h2><i class='bx bx-user-plus'></i> Create Account</h2>
+                        <p>Register as an Employee (Rater)</p>
+                    </div>
+                    <form id="register-form">
+                        <div class="input-group">
+                            <label for="register-fullname">Full Name</label>
+                            <div class="input-wrapper">
+                                <i class='bx bx-id-card'></i>
+                                <input type="text" id="register-fullname" required placeholder="Enter full name">
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <label for="register-username">Username</label>
+                            <div class="input-wrapper">
+                                <i class='bx bx-user'></i>
+                                <input type="text" id="register-username" required placeholder="Choose a username">
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <label for="register-password">Password</label>
+                            <div class="input-wrapper">
+                                <i class='bx bx-lock-alt'></i>
+                                <input type="password" id="register-password" required placeholder="Choose a password">
+                                <button type="button" class="toggle-password" tabindex="-1"><i class='bx bx-show'></i></button>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn primary-btn" style="width: 100%; margin-top: 10px;">Register</button>
+                    </form>
+                    <div class="auth-footer">
+                        <p>Already have an account? <button id="go-to-login" class="btn outline-btn" style="padding: 5px 10px; margin-left: 10px;">Login</button></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Employee Dashboard (Rating Form) -->
+        <div id="employee-view" class="view">
+            <nav class="navbar glass-panel">
+                <div class="nav-brand"><i class='bx bx-star'></i> Rating System</div>
+                <div class="nav-user">
+                    <span id="employee-welcome">Welcome, User</span>
+                    <button id="employee-settings" class="btn outline-btn"><i class='bx bx-cog'></i></button>
+                    <button id="employee-logout" class="btn outline-btn"><i class='bx bx-log-out'></i> Logout</button>
+                </div>
+            </nav>
+            <main class="dashboard-content">
+                <div class="import-section glass-panel" style="flex-direction: column; align-items: flex-start; gap: 15px;">
+                    <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
+                        <div class="import-info">
+                            <h3><i class='bx bx-file'></i> Import from Excel</h3>
+                            <p>Upload a properly formatted Excel (.xlsx) or CSV file to auto-fill the form.</p>
+                        </div>
+                        <label for="excel-import" class="btn outline-btn"><i class='bx bx-upload'></i> Select File</label>
+                        <input type="file" id="excel-import" accept=".xlsx, .xls, .csv" class="hidden">
+                    </div>
+                    <div class="import-requirements" style="font-size: 0.85rem; color: var(--text-muted); background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; width: 100%;">
+                        <strong style="color: var(--text-secondary);"><i class='bx bx-info-circle'></i> Required Format:</strong>
+                        <ul style="margin-top: 8px; margin-left: 20px; line-height: 1.6;">
+                            <li><strong>Row 1:</strong> Position</li>
+                            <li><strong>Row 2:</strong> Applicant Name</li>
+                            <li><strong>Row 4-14:</strong> The 11 Criteria in exact order (e.g. Communication Skills must be Row 4, Leadership must be Row 5, etc.)</li>
+                            <li><strong>Column A:</strong> Contains the Criteria Names</li>
+                            <li><strong>Column B:</strong> Contains the Points (Max Score)</li>
+                            <li><strong>Column C:</strong> Contains the numerical Ratings</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="rating-card glass-panel">
+                    <div class="rating-header">
+                        <h2>Applicant Rating Form</h2>
+                        <p>Potential & Psychosocial Attributes/Personality Traits - BEI</p>
+                    </div>
+                    <form id="rating-form">
+                        <div class="form-row">
+                            <div class="input-group">
+                                <label for="position-applied">Position</label>
+                                <div class="input-wrapper">
+                                    <input type="text" id="position-applied" required placeholder="e.g. Software Engineer">
+                                </div>
+                            </div>
+                            <div class="input-group">
+                                <label for="applicant-name">Applicant Name</label>
+                                <div class="input-wrapper">
+                                    <input type="text" id="applicant-name" required placeholder="Full Name">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="table-responsive">
+                            <table class="rating-table">
+                                <thead>
+                                    <tr>
+                                        <th>CRITERIA/ATTRIBUTES</th>
+                                        <th class="points-col">POINTS</th>
+                                        <th>RATING</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td>COMMUNICATION SKILLS</td>
+                                        <td class="points-col">3</td>
+                                        <td><input type="number" name="q1" min="0" max="3" required></td>
+                                    </tr>
+                                    <tr>
+                                        <td>LEADERSHIP SKILLS</td>
+                                        <td class="points-col">2</td>
+                                        <td><input type="number" name="q2" min="0" max="2" required></td>
+                                    </tr>
+                                    <tr>
+                                        <td>PLANNING/DECISION MAKING</td>
+                                        <td class="points-col">2</td>
+                                        <td><input type="number" name="q3" min="0" max="2" required></td>
+                                    </tr>
+                                    <tr>
+                                        <td>WORK-ORIENTED/DEDICATION & COMMITMENT</td>
+                                        <td class="points-col">1</td>
+                                        <td><input type="number" name="q4" min="0" max="1" required></td>
+                                    </tr>
+                                    <tr>
+                                        <td>QUALITY OF WORK</td>
+                                        <td class="points-col">1</td>
+                                        <td><input type="number" name="q5" min="0" max="1" required></td>
+                                    </tr>
+                                    <tr>
+                                        <td>CREATIVE, SIMPLE & EFFICIENT</td>
+                                        <td class="points-col">1</td>
+                                        <td><input type="number" name="q6" min="0" max="1" required></td>
+                                    </tr>
+                                    <tr>
+                                        <td>PERSONAL CONDUCT/BEHAVIOR</td>
+                                        <td class="points-col">3</td>
+                                        <td><input type="number" name="q7" min="0" max="3" required></td>
+                                    </tr>
+                                    <tr>
+                                        <td>SERVICE-ORIENTED/WORK ATTITUDE</td>
+                                        <td class="points-col">2</td>
+                                        <td><input type="number" name="q8" min="0" max="2" required></td>
+                                    </tr>
+                                    <tr>
+                                        <td>MORAL VALUES</td>
+                                        <td class="points-col">2</td>
+                                        <td><input type="number" name="q9" min="0" max="2" required></td>
+                                    </tr>
+                                    <tr>
+                                        <td>TEAMWORK</td>
+                                        <td class="points-col">2</td>
+                                        <td><input type="number" name="q10" min="0" max="2" required></td>
+                                    </tr>
+                                    <tr>
+                                        <td>MANNER & APPEARANCE</td>
+                                        <td class="points-col">1</td>
+                                        <td><input type="number" name="q11" min="0" max="1" required></td>
+                                    </tr>
+                                </tbody>
+                                <tfoot>
+                                    <tr>
+                                        <td colspan="2" class="total-label">Total Score</td>
+                                        <td id="live-total">0 / 20</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                        <div class="rater-section">
+                            <p>RATER:</p>
+                            <h4 id="form-rater-name" class="rater-name-line">Employee Name</h4>
+                            <p class="rater-role">Employee</p>
+                        </div>
+                        <div class="form-actions">
+                            <button type="button" id="pre-submit-btn" class="btn primary-btn"><i class='bx bx-send'></i> Submit Rating</button>
+                        </div>
+                    </form>
+                </div>
+            </main>
+        </div>
+
+        <!-- Admin Dashboard -->
+        <div id="admin-view" class="view">
+            <nav class="navbar glass-panel">
+                <div class="nav-brand"><i class='bx bx-shield-quarter'></i> Admin Dashboard</div>
+                <div class="nav-user">
+                    <span id="admin-welcome">Welcome, Admin</span>
+                    <button id="admin-settings" class="btn outline-btn"><i class='bx bx-cog'></i></button>
+                    <button id="admin-logout" class="btn outline-btn"><i class='bx bx-log-out'></i> Logout</button>
+                </div>
+            </nav>
+            <main class="dashboard-content">
+                <!-- Dashboard Summary Cards -->
+                <div class="admin-summary-cards">
+                    <div class="summary-card glass-panel">
+                        <i class='bx bx-file'></i>
+                        <div class="summary-info">
+                            <h3>Total Ratings</h3>
+                            <h2 id="total-ratings-count">0</h2>
+                        </div>
+                    </div>
+                    <div class="summary-card glass-panel">
+                        <i class='bx bx-user-check'></i>
+                        <div class="summary-info">
+                            <h3>Unique Applicants</h3>
+                            <h2 id="unique-applicants-count">0</h2>
+                        </div>
+                    </div>
+                    <div class="summary-card glass-panel">
+                        <i class='bx bx-star'></i>
+                        <div class="summary-info">
+                            <h3>Average Score</h3>
+                            <h2 id="avg-score-count">0</h2>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="admin-header-actions">
+                    <h2>Recent Submissions</h2>
+                    <button id="clear-data-btn" class="btn danger-btn"><i class='bx bx-trash'></i> Clear All Data</button>
+                </div>
+                <div class="ratings-container glass-panel">
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Rater</th>
+                                    <th>Applicant</th>
+                                    <th>Position</th>
+                                    <th>Score</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="admin-ratings-tbody">
+                                <!-- Dynamically populated -->
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="no-ratings-msg" class="empty-state">
+                        <i class='bx bx-folder-open'></i>
+                        <p>No ratings submitted yet.</p>
+                    </div>
+                </div>
+            </main>
+        </div>
+        
+        <!-- View Details Modal (Admin) -->
+        <div id="details-modal" class="modal">
+            <div class="modal-content glass-panel">
+                <span class="close-modal">&times;</span>
+                <h2>Rating Details</h2>
+                <div id="modal-details-body">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+        </div>
+
+
+
+        <!-- Account Settings View -->
+        <div id="settings-view" class="view">
+            <nav class="navbar glass-panel">
+                <div class="nav-brand"><i class='bx bx-cog'></i> Account Settings</div>
+                <div class="nav-user">
+                    <button id="settings-back" class="btn outline-btn"><i class='bx bx-arrow-back'></i> Back to Dashboard</button>
+                </div>
+            </nav>
+            <main class="dashboard-content">
+                <div class="auth-card glass-panel" style="margin: 0 auto;">
+                    <div class="auth-header">
+                        <h2>Edit Profile</h2>
+                    </div>
+                    <form id="settings-form">
+                        <div class="input-group">
+                            <label for="settings-fullname">Full Name</label>
+                            <div class="input-wrapper">
+                                <i class='bx bx-id-card'></i>
+                                <input type="text" id="settings-fullname" required placeholder="Update your full name">
+                            </div>
+                        </div>
+                        <div class="input-group">
+                            <label for="settings-password">New Password (Optional)</label>
+                            <div class="input-wrapper">
+                                <i class='bx bx-lock-alt'></i>
+                                <input type="password" id="settings-password" placeholder="Leave blank to keep current">
+                                <button type="button" class="toggle-password" tabindex="-1"><i class='bx bx-show'></i></button>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn primary-btn" style="width: 100%; margin-top: 10px;"><i class='bx bx-save'></i> Save Changes</button>
+                    </form>
+                    <hr class="settings-divider">
+                    <div class="danger-zone">
+                        <h3>Danger Zone</h3>
+                        <p>Once you delete your account, there is no going back. Please be certain.</p>
+                        <button id="delete-account-btn" class="btn danger-btn" style="width: 100%; margin-top: 10px;"><i class='bx bx-trash'></i> Delete Account</button>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <!-- Custom Confirmation Modal (Message Window) -->
+        <div id="confirm-modal" class="modal">
+            <div class="modal-content glass-panel" style="max-width: 400px; text-align: center;">
+                <i id="confirm-icon" class='bx bx-question-mark' style="font-size: 4rem; color: var(--secondary-color); margin-bottom: 10px;"></i>
+                <h2 id="confirm-title">Confirm Action</h2>
+                <p id="confirm-message" style="margin: 15px 0; color: var(--text-secondary);">Are you sure?</p>
+                <div style="display: flex; gap: 10px; justify-content: center; margin-top: 20px;">
+                    <button id="confirm-cancel" class="btn outline-btn">Cancel</button>
+                    <button id="confirm-ok" class="btn primary-btn">Confirm</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="toast"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>

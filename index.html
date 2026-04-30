@@ -65,6 +65,13 @@
                             </div>
                         </div>
                         <div class="input-group">
+                            <label for="register-position">Position</label>
+                            <div class="input-wrapper">
+                                <i class='bx bx-briefcase'></i>
+                                <input type="text" id="register-position" required placeholder="Enter your position (e.g., HRMO II)">
+                            </div>
+                        </div>
+                        <div class="input-group">
                             <label for="register-username">Username</label>
                             <div class="input-wrapper">
                                 <i class='bx bx-user'></i>
@@ -107,15 +114,24 @@
                     <form id="rating-form">
                         <div class="form-row">
                             <div class="input-group">
-                                <label for="position-applied">Position</label>
+                                <label for="applicant-select">Select Applicant</label>
                                 <div class="input-wrapper">
-                                    <input type="text" id="position-applied" required placeholder="e.g. Software Engineer">
+                                    <i class='bx bx-user' style="z-index: 1;"></i>
+                                    <select id="applicant-select" required style="padding-left: 40px; appearance: none;">
+                                        <option value="" disabled selected>Select an applicant to rate...</option>
+                                        <!-- Dynamically populated -->
+                                    </select>
+                                    <i class='bx bx-chevron-down' style="position: absolute; right: 15px; left: auto;"></i>
                                 </div>
                             </div>
                             <div class="input-group">
-                                <label for="applicant-name">Applicant Name</label>
+                                <label for="position-applied">Position</label>
                                 <div class="input-wrapper">
-                                    <input type="text" id="applicant-name" required placeholder="Full Name">
+                                    <i class='bx bx-briefcase' style="z-index: 1;"></i>
+                                    <select id="position-applied" required style="padding-left: 40px; appearance: none;">
+                                        <option value="" disabled selected>Select an applicant first</option>
+                                    </select>
+                                    <i class='bx bx-chevron-down' style="position: absolute; right: 15px; left: auto;"></i>
                                 </div>
                             </div>
                         </div>
@@ -194,12 +210,16 @@
                                 </tfoot>
                             </table>
                         </div>
-                        <div class="rater-section">
-                            <p>RATER:</p>
-                            <h4 id="form-rater-name" class="rater-name-line">Employee Name</h4>
-                            <p class="rater-role">Employee</p>
+                            <div class="rater-section" style="margin-top: 0; margin-bottom: 0;">
+                                <p>RATER:</p>
+                                <h4 id="form-rater-name" class="rater-name-line">Employee Name</h4>
+                                <p class="rater-role">Employee</p>
+                            </div>
                         </div>
-                        <div class="form-actions">
+
+                        <hr style="border: none; border-top: 1px solid var(--glass-border); margin: 20px 0;">
+
+                        <div class="form-actions-bar" style="justify-content: flex-end;">
                             <button type="button" id="pre-submit-btn" class="btn primary-btn"><i class='bx bx-send'></i> Submit Rating</button>
                         </div>
                     </form>
@@ -218,59 +238,71 @@
                 </div>
             </nav>
             <main class="dashboard-content">
-                <!-- Dashboard Summary Cards -->
-                <div class="admin-summary-cards">
-                    <div class="summary-card glass-panel">
-                        <i class='bx bx-file'></i>
-                        <div class="summary-info">
-                            <h3>Total Ratings</h3>
-                            <h2 id="total-ratings-count">0</h2>
-                        </div>
-                    </div>
-                    <div class="summary-card glass-panel">
-                        <i class='bx bx-user-check'></i>
-                        <div class="summary-info">
-                            <h3>Unique Applicants</h3>
-                            <h2 id="unique-applicants-count">0</h2>
-                        </div>
-                    </div>
-                    <div class="summary-card glass-panel">
-                        <i class='bx bx-star'></i>
-                        <div class="summary-info">
-                            <h3>Average Score</h3>
-                            <h2 id="avg-score-count">0</h2>
-                        </div>
-                    </div>
+                <!-- Admin Tabs -->
+                <div class="admin-tabs" style="display: flex; gap: 10px; margin-bottom: 20px;">
+                    <button class="btn primary-btn admin-tab-btn" data-tab="overview"><i class='bx bx-grid-alt'></i> Overview & Applicants</button>
+                    <button class="btn outline-btn admin-tab-btn" data-tab="submissions"><i class='bx bx-list-check'></i> Recent Submissions</button>
                 </div>
 
-                <div class="admin-header-actions">
-                    <h2>Recent Submissions</h2>
-                    <div style="display: flex; gap: 10px;">
-                        <button id="history-btn" class="btn outline-btn"><i class='bx bx-history'></i> History</button>
-                        <button id="clear-data-btn" class="btn danger-btn"><i class='bx bx-trash'></i> Clear All Data</button>
+                <div id="admin-tab-overview" class="admin-tab-content active">
+                <!-- Manage Applicants Section -->
+                <div class="manage-applicants-section glass-panel" style="padding: 20px; margin-bottom: 30px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h2 style="display: flex; align-items: center; gap: 8px;"><i class='bx bx-user-plus' style="color: var(--secondary-color);"></i> Active Applicant Forms</h2>
+                        <button id="open-add-applicant-btn" class="btn primary-btn"><i class='bx bx-plus'></i> Add Applicant</button>
                     </div>
-                </div>
-                <div class="ratings-container glass-panel">
-                    <div class="table-responsive">
+                    <div class="table-responsive" style="margin-bottom: 0;">
                         <table class="data-table">
                             <thead>
                                 <tr>
-                                    <th>Date</th>
-                                    <th>Rater</th>
-                                    <th>Applicant</th>
+                                    <th>Applicant Name</th>
                                     <th>Position</th>
-                                    <th>Score</th>
+                                    <th>Date Added</th>
                                     <th>Action</th>
                                 </tr>
                             </thead>
-                            <tbody id="admin-ratings-tbody">
+                            <tbody id="admin-applicants-tbody">
                                 <!-- Dynamically populated -->
                             </tbody>
                         </table>
                     </div>
-                    <div id="no-ratings-msg" class="empty-state">
+                    <div id="no-applicants-msg" class="empty-state hidden" style="padding: 30px 20px;">
                         <i class='bx bx-folder-open'></i>
-                        <p>No ratings submitted yet.</p>
+                        <p>No active applicants found. Add one to get started.</p>
+                    </div>
+                </div>
+
+                </div>
+
+                <div id="admin-tab-submissions" class="admin-tab-content" style="display: none;">
+                    <div class="admin-header-actions">
+                        <h2>Recent Submissions</h2>
+                        <div style="display: flex; gap: 10px;">
+                            <button id="history-btn" class="btn outline-btn"><i class='bx bx-history'></i> History</button>
+                            <button id="clear-data-btn" class="btn danger-btn"><i class='bx bx-trash'></i> Clear All Data</button>
+                        </div>
+                    </div>
+                    <div class="ratings-container glass-panel">
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Date (Latest)</th>
+                                        <th>Rater</th>
+                                        <th>Position</th>
+                                        <th>Applicants Rated</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="admin-ratings-tbody">
+                                    <!-- Dynamically populated -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="no-ratings-msg" class="empty-state">
+                            <i class='bx bx-folder-open'></i>
+                            <p>No ratings submitted yet.</p>
+                        </div>
                     </div>
                 </div>
             </main>
@@ -278,9 +310,9 @@
         
         <!-- View Details Modal (Admin) -->
         <div id="details-modal" class="modal">
-            <div class="modal-content glass-panel">
+            <div class="modal-content glass-panel wide-modal">
                 <span class="close-modal">&times;</span>
-                <h2>Rating Details</h2>
+                <h2>Rating Form Details</h2>
                 <div id="modal-details-body">
                     <!-- Populated dynamically -->
                 </div>
@@ -321,6 +353,31 @@
             </div>
         </div>
 
+        <!-- Add Applicant Modal (Admin) -->
+        <div id="add-applicant-modal" class="modal">
+            <div class="modal-content glass-panel" style="max-width: 400px;">
+                <span class="close-modal">&times;</span>
+                <h2>Add Rating Form</h2>
+                <form id="add-applicant-form" style="margin-top: 20px;">
+                    <div class="input-group">
+                        <label for="new-applicant-name">Applicant Name</label>
+                        <div class="input-wrapper">
+                            <i class='bx bx-user' style="z-index: 1;"></i>
+                            <input type="text" id="new-applicant-name" required placeholder="Full Name" style="padding-left: 40px;">
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label for="new-applicant-position">Position</label>
+                        <div class="input-wrapper">
+                            <i class='bx bx-briefcase' style="z-index: 1;"></i>
+                            <input type="text" id="new-applicant-position" required placeholder="Position Applied" style="padding-left: 40px;">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn primary-btn" style="width: 100%; margin-top: 10px;">Create Form</button>
+                </form>
+            </div>
+        </div>
+
 
 
         <!-- Account Settings View -->
@@ -342,6 +399,13 @@
                             <div class="input-wrapper">
                                 <i class='bx bx-id-card'></i>
                                 <input type="text" id="settings-fullname" required placeholder="Update your full name">
+                            </div>
+                        </div>
+                        <div class="input-group" id="settings-position-group">
+                            <label for="settings-position">Position</label>
+                            <div class="input-wrapper">
+                                <i class='bx bx-briefcase'></i>
+                                <input type="text" id="settings-position" required placeholder="Update your position">
                             </div>
                         </div>
                         <div class="input-group">
@@ -382,6 +446,8 @@
     <!-- Notification Toast -->
     <div id="toast" class="toast"></div>
 
+    <!-- SheetJS (xlsx) for Excel Export -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
     <script src="app.js"></script>
 </body>
 </html>

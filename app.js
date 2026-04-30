@@ -15,6 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
             registerForm: document.getElementById('register-form'),
             registerFullname: document.getElementById('register-fullname'),
             registerUsername: document.getElementById('register-username'),
+            registerPosition: document.getElementById('register-position'),
             registerPassword: document.getElementById('register-password'),
             goToRegister: document.getElementById('go-to-register'),
             goToLogin: document.getElementById('go-to-login')
@@ -27,7 +28,10 @@ document.addEventListener('DOMContentLoaded', () => {
             preSubmitBtn: document.getElementById('pre-submit-btn'),
             liveTotal: document.getElementById('live-total'),
             numberInputs: document.querySelectorAll('.rating-table input[type="number"]'),
-            raterName: document.getElementById('form-rater-name')
+            raterName: document.getElementById('form-rater-name'),
+            raterRole: document.querySelector('.rater-role'),
+            applicantSelect: document.getElementById('applicant-select'),
+            positionApplied: document.getElementById('position-applied')
         },
         admin: {
             el: document.getElementById('admin-view'),
@@ -35,18 +39,24 @@ document.addEventListener('DOMContentLoaded', () => {
             logoutBtn: document.getElementById('admin-logout'),
             tbody: document.getElementById('admin-ratings-tbody'),
             clearBtn: document.getElementById('clear-data-btn'),
-            totalCount: document.getElementById('total-ratings-count'),
-            uniqueCount: document.getElementById('unique-applicants-count'),
-            avgCount: document.getElementById('avg-score-count'),
             emptyState: document.getElementById('no-ratings-msg'),
             settingsBtn: document.getElementById('admin-settings'),
+            exportBtn: document.getElementById('export-excel-btn'),
             historyBtn: document.getElementById('history-btn'),
             historyModal: document.getElementById('history-modal'),
             historyClose: document.querySelector('#history-modal .close-modal'),
             historyTbody: document.getElementById('history-tbody'),
             restoreAllBtn: document.getElementById('restore-all-btn'),
             deleteAllHistoryBtn: document.getElementById('delete-all-history-btn'),
-            noHistoryMsg: document.getElementById('no-history-msg')
+            noHistoryMsg: document.getElementById('no-history-msg'),
+            applicantsTbody: document.getElementById('admin-applicants-tbody'),
+            noApplicantsMsg: document.getElementById('no-applicants-msg'),
+            openAddApplicantBtn: document.getElementById('open-add-applicant-btn'),
+            addApplicantModal: document.getElementById('add-applicant-modal'),
+            addApplicantForm: document.getElementById('add-applicant-form'),
+            newApplicantName: document.getElementById('new-applicant-name'),
+            newApplicantPosition: document.getElementById('new-applicant-position'),
+            addApplicantClose: document.querySelector('#add-applicant-modal .close-modal')
         },
         modal: {
             el: document.getElementById('details-modal'),
@@ -63,6 +73,8 @@ document.addEventListener('DOMContentLoaded', () => {
         settings: {
             form: document.getElementById('settings-form'),
             fullname: document.getElementById('settings-fullname'),
+            positionGroup: document.getElementById('settings-position-group'),
+            position: document.getElementById('settings-position'),
             password: document.getElementById('settings-password'),
             backBtn: document.getElementById('settings-back'),
             deleteBtn: document.getElementById('delete-account-btn')
@@ -114,6 +126,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!localStorage.getItem('ratingSystem_deletedRatings')) {
         localStorage.setItem('ratingSystem_deletedRatings', JSON.stringify([]));
     }
+    if (!localStorage.getItem('ratingSystem_applicants')) {
+        localStorage.setItem('ratingSystem_applicants', JSON.stringify([]));
+    }
+
+    // ---- Global State Variables ----
+    let editingApplicantId = null;
 
     // ---- Utility Functions ----
     const showToast = (msg, type = 'success') => {
@@ -131,13 +149,28 @@ document.addEventListener('DOMContentLoaded', () => {
         if (viewName === 'employee') {
             app.employee.welcome.textContent = `Welcome, ${currentUser.fullName || currentUser.username}`;
             app.employee.raterName.textContent = currentUser.fullName || currentUser.username;
+            if (app.employee.raterRole) {
+                app.employee.raterRole.textContent = currentUser.position || 'Employee';
+            }
             updateLiveTotal(); // reset total
+            renderEmployeeApplicantDropdown();
         } else if (viewName === 'admin') {
             app.admin.welcome.textContent = `Welcome, ${currentUser.fullName || currentUser.username}`;
             renderAdminTable();
+            renderAdminApplicantsTable();
         } else if (viewName === 'settings') {
             app.settings.fullname.value = currentUser.fullName || currentUser.username;
             app.settings.password.value = '';
+            if (currentUser.role === 'admin') {
+                if (app.settings.positionGroup) app.settings.positionGroup.style.display = 'none';
+                if (app.settings.position) app.settings.position.removeAttribute('required');
+            } else {
+                if (app.settings.positionGroup) app.settings.positionGroup.style.display = 'block';
+                if (app.settings.position) {
+                    app.settings.position.setAttribute('required', 'required');
+                    app.settings.position.value = currentUser.position || '';
+                }
+            }
         } else if (viewName === 'login' || viewName === 'register') {
             app.auth.loginForm.reset();
             app.auth.registerForm.reset();
@@ -152,6 +185,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             });
+            
+            if (viewName === 'login') {
+                setTimeout(() => app.auth.loginUsername.focus(), 50);
+            } else if (viewName === 'register') {
+                setTimeout(() => app.auth.registerFullname.focus(), 50);
+            }
         }
     };
 
@@ -200,6 +239,27 @@ document.addEventListener('DOMContentLoaded', () => {
     app.auth.goToRegister.addEventListener('click', () => switchView('register'));
     app.auth.goToLogin.addEventListener('click', () => switchView('login'));
 
+    // Admin Tabs Logic
+    document.querySelectorAll('.admin-tab-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const targetTab = e.currentTarget.getAttribute('data-tab');
+            
+            // Update buttons
+            document.querySelectorAll('.admin-tab-btn').forEach(b => {
+                b.classList.remove('primary-btn');
+                b.classList.add('outline-btn');
+            });
+            e.currentTarget.classList.remove('outline-btn');
+            e.currentTarget.classList.add('primary-btn');
+            
+            // Update content
+            document.querySelectorAll('.admin-tab-content').forEach(c => {
+                c.style.display = 'none';
+            });
+            document.getElementById(`admin-tab-${targetTab}`).style.display = 'block';
+        });
+    });
+
     app.auth.loginForm.addEventListener('submit', (e) => {
         e.preventDefault();
         const username = app.auth.loginUsername.value.trim();
@@ -228,9 +288,10 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         const fullname = app.auth.registerFullname.value.trim();
         const username = app.auth.registerUsername.value.trim();
+        const position = app.auth.registerPosition ? app.auth.registerPosition.value.trim() : 'Employee';
         const password = app.auth.registerPassword.value;
 
-        if (!fullname || !username || !password) {
+        if (!fullname || !username || !password || (app.auth.registerPosition && !position)) {
             showToast('Please fill all fields', 'error');
             return;
         }
@@ -242,7 +303,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         
-        const newUser = { username, password, role: 'employee', fullName: fullname };
+        const newUser = { username, password, role: 'employee', fullName: fullname, position };
         users.push(newUser);
         localStorage.setItem('ratingSystem_users', JSON.stringify(users));
         
@@ -276,10 +337,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (val > max) {
                 input.value = max; // clamp
                 val = max;
-            }
-            if (val < 0) {
+            } else if (val < 0) {
                 input.value = 0;
                 val = 0;
+            } else if (input.value !== "") {
+                input.value = val; // remove leading zeros
             }
             total += val;
         });
@@ -290,15 +352,83 @@ document.addEventListener('DOMContentLoaded', () => {
         input.addEventListener('input', updateLiveTotal);
     });
 
-    // Pre-Submit validation and Custom Confirmation
-    app.employee.preSubmitBtn.addEventListener('click', () => {
-        if(!app.employee.form.checkValidity()) {
-            app.employee.form.reportValidity(); // show default HTML5 validations
-            return;
-        }
+    const renderEmployeeApplicantDropdown = () => {
+        const applicants = JSON.parse(localStorage.getItem('ratingSystem_applicants')) || [];
+        const ratings = JSON.parse(localStorage.getItem('ratingSystem_ratings')) || [];
+        
+        // Filter out applicants that the current user has already rated
+        const raterName = currentUser.fullName || currentUser.username;
+        const ratedCombos = ratings
+            .filter(r => r.rater === raterName)
+            .map(r => `${r.applicant}|${r.position}`);
+            
+        const unratedApplicants = applicants.filter(a => !ratedCombos.includes(`${a.name}|${a.position}`));
+        
+        if (app.employee.applicantSelect) {
+            if (unratedApplicants.length === 0) {
+                app.employee.applicantSelect.innerHTML = '<option value="" disabled selected>No pending applicants to rate</option>';
+                app.employee.positionApplied.innerHTML = '<option value="" disabled selected>Select an applicant first</option>';
+                if (app.employee.preSubmitBtn) app.employee.preSubmitBtn.disabled = true;
+            } else {
+                app.employee.applicantSelect.innerHTML = ''; // No placeholder
+                if (app.employee.preSubmitBtn) app.employee.preSubmitBtn.disabled = false;
+                
+                const uniqueNames = [...new Set(unratedApplicants.map(a => a.name))];
+                uniqueNames.forEach(name => {
+                    const option = document.createElement('option');
+                    option.value = name;
+                    option.textContent = name;
+                    app.employee.applicantSelect.appendChild(option);
+                });
 
-        const applicant = document.getElementById('applicant-name').value.trim();
-        const position = document.getElementById('position-applied').value.trim();
+                // Auto-trigger change to populate position dropdown
+                app.employee.applicantSelect.dispatchEvent(new Event('change'));
+            }
+        }
+    };
+
+    if (app.employee.applicantSelect) {
+        app.employee.applicantSelect.addEventListener('change', (e) => {
+            const selectedName = e.target.value;
+            app.employee.positionApplied.innerHTML = ''; // No placeholder
+            
+            if (selectedName) {
+                const applicants = JSON.parse(localStorage.getItem('ratingSystem_applicants')) || [];
+                const ratings = JSON.parse(localStorage.getItem('ratingSystem_ratings')) || [];
+                
+                const raterName = currentUser.fullName || currentUser.username;
+                const ratedPositions = ratings
+                    .filter(r => r.rater === raterName && r.applicant === selectedName)
+                    .map(r => r.position);
+                    
+                const unratedPositions = [...new Set(applicants
+                    .filter(a => a.name === selectedName && !ratedPositions.includes(a.position))
+                    .map(a => a.position))];
+                    
+                unratedPositions.forEach(pos => {
+                    const option = document.createElement('option');
+                    option.value = pos;
+                    option.textContent = pos;
+                    app.employee.positionApplied.appendChild(option);
+                });
+            }
+        });
+    }
+
+    // Pre-Submit validation and Custom Confirmation
+    if (app.employee.preSubmitBtn) {
+        app.employee.preSubmitBtn.addEventListener('click', () => {
+            if(!app.employee.form.checkValidity()) {
+                app.employee.form.reportValidity(); // show default HTML5 validations
+                return;
+            }
+
+            const applicant = app.employee.applicantSelect.value;
+            
+            if (!applicant) {
+                showToast('Please select an applicant to rate', 'error');
+                return;
+            }
         
         let totalScore = 0;
         app.employee.numberInputs.forEach(input => {
@@ -315,10 +445,11 @@ document.addEventListener('DOMContentLoaded', () => {
             submitRating();
         });
     });
+    }
 
     const submitRating = () => {
-        const position = document.getElementById('position-applied').value.trim();
-        const applicant = document.getElementById('applicant-name').value.trim();
+        const position = app.employee.positionApplied.value.trim();
+        const applicant = app.employee.applicantSelect.value;
         
         let scores = [];
         let totalScore = 0;
@@ -334,6 +465,7 @@ document.addEventListener('DOMContentLoaded', () => {
             id: Date.now().toString(),
             date: new Date().toLocaleDateString(),
             rater: currentUser.fullName || currentUser.username,
+            raterPosition: currentUser.position || 'Employee',
             position,
             applicant,
             scores,
@@ -348,6 +480,7 @@ document.addEventListener('DOMContentLoaded', () => {
         showToast('Rating submitted successfully!');
         app.employee.form.reset();
         updateLiveTotal();
+        renderEmployeeApplicantDropdown(); // Update list to remove rated applicant
     };
 
     // Employee form actual submit event (prevent default just in case)
@@ -355,19 +488,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ---- Admin Dashboard Logic ----
     const renderAdminTable = () => {
-        const ratings = JSON.parse(localStorage.getItem('ratingSystem_ratings'));
+        const ratings = JSON.parse(localStorage.getItem('ratingSystem_ratings')) || [];
         app.admin.tbody.innerHTML = '';
         
-        // Update summary cards
-        app.admin.totalCount.textContent = ratings.length;
-        const uniqueApplicants = new Set(ratings.map(r => (r.applicant || '').toLowerCase()));
-        app.admin.uniqueCount.textContent = uniqueApplicants.size;
-        
-        let sumScores = 0;
-        ratings.forEach(r => sumScores += r.totalScore);
-        const avg = ratings.length > 0 ? (sumScores / ratings.length).toFixed(1) : 0;
-        app.admin.avgCount.textContent = `${avg} / 20`;
-
         if (ratings.length === 0) {
             app.admin.emptyState.classList.remove('hidden');
             app.admin.tbody.parentElement.classList.add('hidden');
@@ -377,25 +500,39 @@ document.addEventListener('DOMContentLoaded', () => {
         app.admin.emptyState.classList.add('hidden');
         app.admin.tbody.parentElement.classList.remove('hidden');
 
-        // Sort by newest first
-        ratings.sort((a, b) => b.id - a.id).forEach(rating => {
-            const tr = document.createElement('tr');
-            
-            // Score color logic
-            let scoreColor = 'var(--text-primary)';
-            if (rating.totalScore >= 16) scoreColor = 'var(--success)';
-            else if (rating.totalScore <= 10) scoreColor = 'var(--accent-color)';
+        // Group ratings by Rater
+        const groupedRatings = {};
+        ratings.forEach(rating => {
+            const key = rating.rater;
+            if (!groupedRatings[key]) {
+                groupedRatings[key] = {
+                    rater: rating.rater,
+                    positions: new Set(),
+                    latestDate: rating.date,
+                    applicants: []
+                };
+            }
+            groupedRatings[key].latestDate = rating.date;
+            groupedRatings[key].positions.add(rating.position);
+            groupedRatings[key].applicants.push(rating);
+        });
 
+        const sortedGroups = Object.values(groupedRatings).reverse();
+
+        sortedGroups.forEach(group => {
+            const tr = document.createElement('tr');
+            const positionsStr = Array.from(group.positions).join(', ');
+            
             tr.innerHTML = `
-                <td>${rating.date}</td>
-                <td>${rating.rater}</td>
-                <td>${rating.applicant}</td>
-                <td>${rating.position}</td>
-                <td style="color: ${scoreColor}; font-weight: bold;">${rating.totalScore} / ${rating.maxScore}</td>
+                <td>${group.latestDate}</td>
+                <td>${group.rater}</td>
+                <td>${positionsStr}</td>
+                <td style="font-weight: 600;">${group.applicants.length} Applicant(s)</td>
                 <td>
                     <div style="display: flex; gap: 8px; align-items: center;">
-                        <button class="btn outline-btn view-btn" data-id="${rating.id}">View Details</button>
-                        <button class="btn danger-btn delete-btn" data-id="${rating.id}" style="padding: 8px 12px;"><i class='bx bx-trash'></i></button>
+                        <button class="btn outline-btn view-btn" data-rater="${group.rater}">View Details</button>
+                        <button class="btn outline-btn export-row-btn" data-rater="${group.rater}" style="padding: 8px 12px;" title="Export to Excel"><i class='bx bx-export'></i></button>
+                        <button class="btn danger-btn delete-group-btn" data-rater="${group.rater}" style="padding: 8px 12px;" title="Delete Submissions"><i class='bx bx-trash'></i></button>
                     </div>
                 </td>
             `;
@@ -404,12 +541,319 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Add event listeners
         document.querySelectorAll('.view-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => openDetailsModal(e.currentTarget.getAttribute('data-id')));
+            btn.addEventListener('click', (e) => {
+                const rater = e.currentTarget.getAttribute('data-rater');
+                openDetailsModal(rater);
+            });
         });
-        document.querySelectorAll('.delete-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => deleteRating(e.currentTarget.getAttribute('data-id')));
+        document.querySelectorAll('.export-row-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const rater = e.currentTarget.getAttribute('data-rater');
+                exportRaterToExcel(rater);
+            });
+        });
+        document.querySelectorAll('.delete-group-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const rater = e.currentTarget.getAttribute('data-rater');
+                deleteRatingGroup(rater);
+            });
         });
     };
+
+    const exportRaterToExcel = (rater) => {
+        const ratings = JSON.parse(localStorage.getItem('ratingSystem_ratings')) || [];
+        const raterRatings = ratings.filter(r => r.rater === rater);
+        if (raterRatings.length === 0) {
+            showToast('No data to export', 'error');
+            return;
+        }
+
+        const criteriaNames = [
+            "COMMUNICATION SKILLS",
+            "LEADERSHIP SKILLS",
+            "PLANNING/DECISION MAKING",
+            "WORK-ORIENTED/DEDICATION & COMMITMENT",
+            "QUALITY OF WORK",
+            "CREATIVE, SIMPLE & EFFICIENT",
+            "PERSONAL CONDUCT/BEHAVIOR",
+            "SERVICE-ORIENTED/WORK ATTITUDE",
+            "MORAL VALUES",
+            "TEAMWORK",
+            "MANNER & APPEARANCE"
+        ];
+        const maxPoints = [3, 2, 2, 1, 1, 1, 3, 2, 2, 2, 1];
+
+        const workbook = XLSX.utils.book_new();
+        const aoa = [];
+
+        // Title (Row 0)
+        aoa.push(["POTENTIAL & PSYCHOSOCIAL ATTRIBUTES/PERSONALITY TRAITS - BEI"]);
+        // Empty row (Row 1)
+        aoa.push([]);
+
+        // Headers: Names (Row 2)
+        const headerRowName = ["CRITERIA/ATTRIBUTES", "POINTS"];
+        raterRatings.forEach(r => {
+            headerRowName.push(r.applicant.toUpperCase());
+        });
+        aoa.push(headerRowName);
+
+        // Headers: Positions (Row 3)
+        const headerRowPos = ["", ""];
+        raterRatings.forEach(r => {
+            headerRowPos.push(r.position.toUpperCase());
+        });
+        aoa.push(headerRowPos);
+
+        // Criteria Rows (Rows 4-14)
+        criteriaNames.forEach((criteria, index) => {
+            const row = [criteria, maxPoints[index]];
+            raterRatings.forEach(r => {
+                row.push(r.scores[index] !== undefined ? r.scores[index] : "");
+            });
+            aoa.push(row);
+        });
+
+        // Total Score (Row 15)
+        const totalRow = ["", "TOTAL SCORE:"];
+        raterRatings.forEach(r => {
+            totalRow.push(r.totalScore);
+        });
+        aoa.push(totalRow);
+
+        // Footer
+        const raterPosition = raterRatings[0].raterPosition || 'Employee';
+        aoa.push([]);
+        aoa.push(["", "RATER:"]);
+        aoa.push([]);
+        aoa.push(["", rater.toUpperCase()]);
+        aoa.push(["", raterPosition]);
+
+        const worksheet = XLSX.utils.aoa_to_sheet(aoa);
+
+        // Auto-fit column widths based on longest text
+        const colWidths = [];
+        aoa.forEach((row, rowIdx) => {
+            if (rowIdx === 0) return; // skip the title row which spans multiple columns
+
+            row.forEach((cell, colIdx) => {
+                const cellVal = cell !== undefined && cell !== null ? cell.toString() : "";
+                const maxLineLen = cellVal.split('\n').reduce((max, line) => Math.max(max, line.length), 0);
+                
+                if (!colWidths[colIdx]) {
+                    colWidths[colIdx] = { wch: Math.max(10, maxLineLen + 2) }; // Minimum width 10
+                } else {
+                    colWidths[colIdx].wch = Math.max(colWidths[colIdx].wch, maxLineLen + 2);
+                }
+            });
+        });
+        worksheet['!cols'] = colWidths;
+
+        // Merge cells
+        worksheet['!merges'] = [
+            // Title merge
+            { s: { r: 0, c: 0 }, e: { r: 0, c: Math.max(1, raterRatings.length + 1) } },
+            // CRITERIA/ATTRIBUTES vertical merge
+            { s: { r: 2, c: 0 }, e: { r: 3, c: 0 } },
+            // POINTS vertical merge
+            { s: { r: 2, c: 1 }, e: { r: 3, c: 1 } }
+        ];
+
+        // Ensure text wrapping and alignment
+        for (let R = 2; R <= 3; ++R) {
+            for (let C = 0; C <= raterRatings.length + 1; ++C) {
+                const cellRef = XLSX.utils.encode_cell({r: R, c: C});
+                if (worksheet[cellRef]) {
+                    if (!worksheet[cellRef].s) worksheet[cellRef].s = {};
+                    worksheet[cellRef].s.alignment = { vertical: 'center', horizontal: 'center' };
+                }
+            }
+        }
+
+        const safeSheetName = "Rating Details";
+        XLSX.utils.book_append_sheet(workbook, worksheet, safeSheetName);
+
+        const safeRaterName = rater.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+        XLSX.writeFile(workbook, `${safeRaterName}_ratings.xlsx`);
+        showToast(`Exported ${rater}'s submissions!`, 'success');
+    };
+
+    const deleteRatingGroup = (rater) => {
+        showConfirm('Delete Submissions', 'Are you sure you want to delete these submissions? They will be moved to history.', () => {
+            let ratings = JSON.parse(localStorage.getItem('ratingSystem_ratings')) || [];
+            let deletedRatings = JSON.parse(localStorage.getItem('ratingSystem_deletedRatings')) || [];
+            
+            const toDelete = ratings.filter(r => r.rater === rater);
+            const toKeep = ratings.filter(r => r.rater !== rater);
+            
+            deletedRatings.push(...toDelete);
+            localStorage.setItem('ratingSystem_ratings', JSON.stringify(toKeep));
+            localStorage.setItem('ratingSystem_deletedRatings', JSON.stringify(deletedRatings));
+            
+            renderAdminTable();
+            showToast('Submissions moved to history.', 'success');
+        });
+    };
+
+    const renderAdminApplicantsTable = () => {
+        const applicants = JSON.parse(localStorage.getItem('ratingSystem_applicants')) || [];
+        app.admin.applicantsTbody.innerHTML = '';
+        
+        if (applicants.length === 0) {
+            app.admin.noApplicantsMsg.classList.remove('hidden');
+            app.admin.applicantsTbody.parentElement.classList.add('hidden');
+            return;
+        }
+
+        app.admin.noApplicantsMsg.classList.add('hidden');
+        app.admin.applicantsTbody.parentElement.classList.remove('hidden');
+
+        applicants.forEach(applicant => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${applicant.name}</td>
+                <td>${applicant.position}</td>
+                <td>${applicant.date}</td>
+                <td>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <button class="btn outline-btn edit-applicant-btn" data-id="${applicant.id}" style="padding: 8px 12px;"><i class='bx bx-edit'></i></button>
+                        <button class="btn danger-btn delete-applicant-btn" data-id="${applicant.id}" style="padding: 8px 12px;"><i class='bx bx-trash'></i></button>
+                    </div>
+                </td>
+            `;
+            app.admin.applicantsTbody.appendChild(tr);
+        });
+
+        document.querySelectorAll('.edit-applicant-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => editApplicant(e.currentTarget.getAttribute('data-id')));
+        });
+        
+        document.querySelectorAll('.delete-applicant-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => deleteApplicant(e.currentTarget.getAttribute('data-id')));
+        });
+    };
+
+    const deleteApplicant = (id) => {
+        showConfirm('Delete Applicant Form', 'Are you sure you want to delete this applicant form? Employees will no longer be able to rate them.', () => {
+            let applicants = JSON.parse(localStorage.getItem('ratingSystem_applicants')) || [];
+            applicants = applicants.filter(a => a.id !== id);
+            localStorage.setItem('ratingSystem_applicants', JSON.stringify(applicants));
+            renderAdminApplicantsTable();
+            showToast('Applicant form deleted', 'success');
+        });
+    };
+
+    const editApplicant = (id) => {
+        const applicants = JSON.parse(localStorage.getItem('ratingSystem_applicants')) || [];
+        const applicant = applicants.find(a => a.id === id);
+        if (!applicant) return;
+        
+        editingApplicantId = id;
+        document.querySelector('#add-applicant-modal h2').textContent = 'Edit Rating Form';
+        document.querySelector('#add-applicant-form button[type="submit"]').textContent = 'Save Changes';
+        
+        app.admin.newApplicantName.value = applicant.name;
+        app.admin.newApplicantPosition.value = applicant.position;
+        
+        app.admin.addApplicantModal.classList.add('show');
+        setTimeout(() => app.admin.newApplicantName.focus(), 50);
+    };
+
+    if (app.admin.openAddApplicantBtn) {
+        app.admin.openAddApplicantBtn.addEventListener('click', () => {
+            editingApplicantId = null;
+            document.querySelector('#add-applicant-modal h2').textContent = 'Add Rating Form';
+            document.querySelector('#add-applicant-form button[type="submit"]').textContent = 'Create Form';
+            app.admin.addApplicantForm.reset();
+            app.admin.addApplicantModal.classList.add('show');
+            setTimeout(() => app.admin.newApplicantName.focus(), 50);
+        });
+    }
+
+    if (app.admin.addApplicantClose) {
+        app.admin.addApplicantClose.addEventListener('click', () => {
+            app.admin.addApplicantModal.classList.remove('show');
+        });
+    }
+
+    if (app.admin.addApplicantForm) {
+        app.admin.addApplicantForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const name = app.admin.newApplicantName.value.trim();
+            const position = app.admin.newApplicantPosition.value.trim();
+            
+            if (!name || !position) return;
+
+            let applicants = JSON.parse(localStorage.getItem('ratingSystem_applicants')) || [];
+            
+            if (editingApplicantId) {
+                // Check if another applicant has the exact same name/position
+                if (applicants.some(a => a.id !== editingApplicantId && a.name.toLowerCase() === name.toLowerCase() && a.position.toLowerCase() === position.toLowerCase())) {
+                    showToast('Another applicant already has this exact Rating Form', 'error');
+                    return;
+                }
+                
+                const index = applicants.findIndex(a => a.id === editingApplicantId);
+                if (index > -1) {
+                    const oldName = applicants[index].name;
+                    const oldPosition = applicants[index].position;
+                    
+                    applicants[index].name = name;
+                    applicants[index].position = position;
+                    
+                    // Cascade update to existing ratings
+                    let ratings = JSON.parse(localStorage.getItem('ratingSystem_ratings')) || [];
+                    let updatedRatings = false;
+                    ratings.forEach(r => {
+                        if (r.applicant === oldName && r.position === oldPosition) {
+                            r.applicant = name;
+                            r.position = position;
+                            updatedRatings = true;
+                        }
+                    });
+                    if (updatedRatings) {
+                        localStorage.setItem('ratingSystem_ratings', JSON.stringify(ratings));
+                        renderAdminTable(); 
+                    }
+                    
+                    // Cascade update to deleted ratings
+                    let deletedRatings = JSON.parse(localStorage.getItem('ratingSystem_deletedRatings')) || [];
+                    let updatedDeleted = false;
+                    deletedRatings.forEach(r => {
+                        if (r.applicant === oldName && r.position === oldPosition) {
+                            r.applicant = name;
+                            r.position = position;
+                            updatedDeleted = true;
+                        }
+                    });
+                    if (updatedDeleted) {
+                        localStorage.setItem('ratingSystem_deletedRatings', JSON.stringify(deletedRatings));
+                    }
+                }
+                
+                localStorage.setItem('ratingSystem_applicants', JSON.stringify(applicants));
+                showToast('Applicant form updated successfully');
+            } else {
+                if (applicants.some(a => a.name.toLowerCase() === name.toLowerCase() && a.position.toLowerCase() === position.toLowerCase())) {
+                    showToast('Applicant already has a Rating Form', 'error');
+                    return;
+                }
+
+                applicants.push({
+                    id: Date.now().toString(),
+                    name,
+                    position,
+                    date: new Date().toLocaleDateString()
+                });
+
+                localStorage.setItem('ratingSystem_applicants', JSON.stringify(applicants));
+                showToast('Applicant form added successfully');
+            }
+
+            renderAdminApplicantsTable();
+            app.admin.addApplicantModal.classList.remove('show');
+        });
+    }
 
     const deleteRating = (id) => {
         showConfirm('Delete Rating', 'Are you sure you want to delete this rating? It will be moved to history.', () => {
@@ -427,6 +871,35 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     };
+
+    if (app.admin.exportBtn) {
+        app.admin.exportBtn.addEventListener('click', () => {
+            const ratings = JSON.parse(localStorage.getItem('ratingSystem_ratings')) || [];
+            if (ratings.length === 0) {
+                showToast('No data to export', 'error');
+                return;
+            }
+
+            // Map ratings to a simpler format for Excel
+            const excelData = ratings.map(r => ({
+                'Date': r.date,
+                'Rater': r.rater,
+                'Applicant': r.applicant,
+                'Position': r.position,
+                'Total Score': r.totalScore,
+                'Max Score': r.maxScore
+            }));
+
+            // Create a new workbook and add a worksheet
+            const worksheet = XLSX.utils.json_to_sheet(excelData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Ratings");
+
+            // Generate file and trigger download
+            XLSX.writeFile(workbook, "ratings_export.xlsx");
+            showToast('Export successful!', 'success');
+        });
+    }
 
     app.admin.clearBtn.addEventListener('click', () => {
         showConfirm('Clear All Data', 'Are you sure you want to delete all submitted ratings? They will be moved to history.', () => {
@@ -565,23 +1038,79 @@ document.addEventListener('DOMContentLoaded', () => {
         "MANNER & APPEARANCE"
     ];
 
-    const openDetailsModal = (id) => {
-        const ratings = JSON.parse(localStorage.getItem('ratingSystem_ratings'));
-        const rating = ratings.find(r => r.id === id);
-        if(!rating) return;
+    const openDetailsModal = (rater) => {
+        const ratings = JSON.parse(localStorage.getItem('ratingSystem_ratings')) || [];
+        const raterRatings = ratings.filter(r => r.rater === rater);
+        
+        if (raterRatings.length === 0) return;
 
         let detailsHtml = `
-            <div class="detail-item"><span class="detail-label">Applicant Name</span><span class="detail-value">${rating.applicant}</span></div>
-            <div class="detail-item"><span class="detail-label">Position Applied</span><span class="detail-value">${rating.position}</span></div>
-            <div class="detail-item"><span class="detail-label">Rater (Employee)</span><span class="detail-value">${rating.rater}</span></div>
-            <div class="detail-item"><span class="detail-label">Date Submitted</span><span class="detail-value">${rating.date}</span></div>
-            <div class="detail-item"><span class="detail-label">Total Score</span><span class="detail-value" style="color: var(--secondary-color)">${rating.totalScore} / ${rating.maxScore}</span></div>
-            <h3 style="margin-top: 20px; margin-bottom: 10px; border-bottom: 1px solid var(--glass-border); padding-bottom: 5px;">Criteria Breakdown</h3>
+            <div style="margin-bottom: 20px;">
+                <h3 style="text-transform: uppercase; margin-bottom: 5px;">POTENTIAL & PSYCHOSOCIAL ATTRIBUTES/PERSONALITY TRAITS - BEI</h3>
+            </div>
+            <div class="table-responsive">
+                <table class="data-table" style="min-width: 600px;">
+                    <thead>
+                        <tr>
+                            <th style="width: 30%;">CRITERIA/ATTRIBUTES</th>
+                            <th style="width: 10%; text-align: center;">POINTS</th>
         `;
-
-        rating.scores.forEach((score, index) => {
-            detailsHtml += `<div class="detail-item"><span class="detail-label">${criteriaNames[index]}</span><span class="detail-value">${score}</span></div>`;
+        
+        // Add headers for each applicant
+        raterRatings.forEach(r => {
+            detailsHtml += `<th style="text-align: center;">${r.applicant}<br><span style="font-size: 0.8rem; font-weight: normal; color: var(--text-muted);">${r.position}</span></th>`;
         });
+        
+        detailsHtml += `
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+        
+        const maxPoints = [3, 2, 2, 1, 1, 1, 3, 2, 2, 2, 1];
+        
+        criteriaNames.forEach((criteria, index) => {
+            detailsHtml += `
+                <tr>
+                    <td>${criteria}</td>
+                    <td style="text-align: center; font-weight: 600; color: var(--text-muted);">${maxPoints[index]}</td>
+            `;
+            
+            raterRatings.forEach(r => {
+                detailsHtml += `<td style="text-align: center; font-weight: bold;">${r.scores[index] !== undefined ? r.scores[index] : '-'}</td>`;
+            });
+            
+            detailsHtml += `</tr>`;
+        });
+        
+        detailsHtml += `
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="2" style="text-align: right; font-weight: bold; background: rgba(0,0,0,0.04);">TOTAL SCORE:</td>
+        `;
+        
+        raterRatings.forEach(r => {
+            let scoreColor = 'var(--text-primary)';
+            if (r.totalScore >= 16) scoreColor = 'var(--success)';
+            else if (r.totalScore <= 10) scoreColor = 'var(--accent-color)';
+            detailsHtml += `<td style="text-align: center; font-weight: bold; color: ${scoreColor}; background: rgba(0,0,0,0.04);">${r.totalScore} / ${r.maxScore}</td>`;
+        });
+        
+        detailsHtml += `
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            
+            <div style="margin-top: 30px; margin-bottom: 10px;">
+                <p style="color: var(--text-secondary); font-weight: 600; font-size: 0.9rem; margin-bottom: 5px;">RATER:</p>
+                <div style="border-bottom: 1px solid var(--text-primary); display: inline-block; padding-bottom: 5px; padding-right: 40px; margin-bottom: 5px;">
+                    <span style="font-weight: 700; font-size: 1.1rem; text-transform: uppercase;">${rater}</span>
+                </div>
+                <p style="color: var(--text-muted); font-size: 0.85rem;">${raterRatings[0].raterPosition || 'Employee'}</p>
+            </div>
+        `;
 
         app.modal.body.innerHTML = detailsHtml;
         app.modal.el.classList.add('show');
@@ -597,6 +1126,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (app.admin.historyModal && e.target === app.admin.historyModal) {
             app.admin.historyModal.classList.remove('show');
+        }
+        if (app.admin.addApplicantModal && e.target === app.admin.addApplicantModal) {
+            app.admin.addApplicantModal.classList.remove('show');
         }
     });
 
@@ -626,6 +1158,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (newPassword) {
                     users[userIndex].password = newPassword;
                     currentUser.password = newPassword;
+                }
+
+                if (currentUser.role !== 'admin' && app.settings.position) {
+                    const newPosition = app.settings.position.value.trim();
+                    users[userIndex].position = newPosition;
+                    currentUser.position = newPosition;
                 }
 
                 localStorage.setItem('ratingSystem_users', JSON.stringify(users));

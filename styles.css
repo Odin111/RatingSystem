@@ -432,9 +432,18 @@ tfoot {
     color: var(--success);
 }
 
-.form-actions {
+.form-actions-bar {
     display: flex;
-    justify-content: flex-end;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-top: 10px;
+}
+
+.action-group {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
 }
 
 /* Rater Signature Section */
@@ -593,6 +602,10 @@ tfoot {
     padding: 30px;
     transform: scale(0.95);
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.modal-content.wide-modal {
+    max-width: 90vw;
 }
 
 .modal.show .modal-content {

@@ -845,6 +845,64 @@ tfoot {
         bottom: 20px;
         left: 20px;
     }
+
+    /* Admin Tabs and Header Button Layouts */
+    .admin-tabs {
+        flex-direction: column;
+        gap: 10px !important;
+    }
+
+    .admin-tabs .btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .manage-applicants-section > div:first-child {
+        flex-direction: column;
+        align-items: flex-start !important;
+        gap: 15px;
+    }
+
+    .manage-applicants-section > div:first-child > div {
+        width: 100%;
+        flex-direction: column;
+        gap: 10px !important;
+    }
+
+    .manage-applicants-section > div:first-child .btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .pagination-controls {
+        flex-wrap: wrap;
+        gap: 15px;
+        justify-content: center !important;
+    }
+
+    /* Modal Action Buttons */
+    .modal-content [style*="display: flex"] {
+        flex-direction: column;
+        gap: 10px !important;
+    }
+
+    .modal-content [style*="display: flex"] .btn {
+        width: 100%;
+        justify-content: center;
+        margin-left: 0 !important;
+    }
+
+    /* Table Action Buttons */
+    td > div[style*="display: flex"] {
+        flex-direction: column;
+        align-items: stretch !important;
+        gap: 8px !important;
+    }
+
+    td > div[style*="display: flex"] .btn {
+        width: 100%;
+        justify-content: center;
+    }
 }
 
 /* Custom Tooltip */

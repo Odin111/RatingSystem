@@ -27,11 +27,13 @@ document.addEventListener('DOMContentLoaded', () => {
             form: document.getElementById('rating-form'),
             preSubmitBtn: document.getElementById('pre-submit-btn'),
             liveTotal: document.getElementById('live-total'),
-            numberInputs: document.querySelectorAll('.rating-table input[type="number"]'),
+            numberInputs: document.querySelectorAll('.rating-table input[type="number"]'), // will be dynamic
             raterName: document.getElementById('form-rater-name'),
             raterRole: document.querySelector('.rater-role'),
-            applicantSelect: document.getElementById('applicant-select'),
-            positionApplied: document.getElementById('position-applied')
+            dynamicTable: document.getElementById('dynamic-rating-table'),
+            prevPageBtn: document.getElementById('prev-page-btn'),
+            nextPageBtn: document.getElementById('next-page-btn'),
+            pageIndicator: document.getElementById('page-indicator')
         },
         admin: {
             el: document.getElementById('admin-view'),
@@ -49,6 +51,13 @@ document.addEventListener('DOMContentLoaded', () => {
             restoreAllBtn: document.getElementById('restore-all-btn'),
             deleteAllHistoryBtn: document.getElementById('delete-all-history-btn'),
             noHistoryMsg: document.getElementById('no-history-msg'),
+            applicantHistoryBtn: document.getElementById('applicant-history-btn'),
+            applicantHistoryModal: document.getElementById('applicant-history-modal'),
+            applicantHistoryClose: document.querySelector('#applicant-history-modal .close-modal'),
+            applicantHistoryTbody: document.getElementById('applicant-history-tbody'),
+            restoreAllApplicantsBtn: document.getElementById('restore-all-applicants-btn'),
+            deleteAllApplicantsHistoryBtn: document.getElementById('delete-all-applicants-history-btn'),
+            noApplicantHistoryMsg: document.getElementById('no-applicant-history-msg'),
             applicantsTbody: document.getElementById('admin-applicants-tbody'),
             noApplicantsMsg: document.getElementById('no-applicants-msg'),
             openAddApplicantBtn: document.getElementById('open-add-applicant-btn'),
@@ -56,6 +65,9 @@ document.addEventListener('DOMContentLoaded', () => {
             addApplicantForm: document.getElementById('add-applicant-form'),
             newApplicantName: document.getElementById('new-applicant-name'),
             newApplicantPosition: document.getElementById('new-applicant-position'),
+            newCredentialInput: document.getElementById('new-credential-input'),
+            addCredentialBtn: document.getElementById('add-credential-btn'),
+            credentialsList: document.getElementById('credentials-list'),
             addApplicantClose: document.querySelector('#add-applicant-modal .close-modal')
         },
         modal: {
@@ -129,11 +141,83 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!localStorage.getItem('ratingSystem_applicants')) {
         localStorage.setItem('ratingSystem_applicants', JSON.stringify([]));
     }
+    if (!localStorage.getItem('ratingSystem_deletedApplicants')) {
+        localStorage.setItem('ratingSystem_deletedApplicants', JSON.stringify([]));
+    }
+
+    // ---- Theme Toggle Logic ----
+    const themeToggleBtn = document.getElementById('theme-toggle');
+    const themeIcon = themeToggleBtn ? themeToggleBtn.querySelector('i') : null;
+    
+    // Check local storage for theme
+    const savedTheme = localStorage.getItem('ratingSystem_theme') || 'light';
+    if (savedTheme === 'dark') {
+        document.body.classList.add('dark-mode');
+        if (themeIcon) {
+            themeIcon.classList.remove('bx-moon');
+            themeIcon.classList.add('bx-sun');
+        }
+    }
+
+    if (themeToggleBtn) {
+        themeToggleBtn.addEventListener('click', () => {
+            // Apply global transition class temporarily for smooth toggle
+            document.documentElement.classList.add('theme-transition');
+            
+            document.body.classList.toggle('dark-mode');
+            const isDark = document.body.classList.contains('dark-mode');
+            
+            localStorage.setItem('ratingSystem_theme', isDark ? 'dark' : 'light');
+            
+            if (themeIcon) {
+                if (isDark) {
+                    themeIcon.classList.remove('bx-moon');
+                    themeIcon.classList.add('bx-sun');
+                } else {
+                    themeIcon.classList.remove('bx-sun');
+                    themeIcon.classList.add('bx-moon');
+                }
+            }
+            
+            // Remove the transition class after transition finishes
+            setTimeout(() => {
+                document.documentElement.classList.remove('theme-transition');
+            }, 300);
+        });
+    }
 
     // ---- Global State Variables ----
     let editingApplicantId = null;
+    let currentFormCredentials = [];
+    let currentEmployeePage = 0;
+    const APPLICANTS_PER_PAGE = 15;
+    let currentPendingApplicants = [];
+
+    const RATING_CRITERIA = [
+        "COMMUNICATION SKILLS",
+        "LEADERSHIP SKILLS",
+        "PLANNING/DECISION MAKING",
+        "WORK-ORIENTED/DEDICATION & COMMITMENT",
+        "QUALITY OF WORK",
+        "CREATIVE, SIMPLE & EFFICIENT",
+        "PERSONAL CONDUCT/BEHAVIOR",
+        "SERVICE-ORIENTED/WORK ATTITUDE",
+        "MORAL VALUES",
+        "TEAMWORK",
+        "MANNER & APPEARANCE"
+    ];
+    const MAX_POINTS = [3, 2, 2, 1, 1, 1, 3, 2, 2, 2, 1];
 
     // ---- Utility Functions ----
+    const getLastName = (fullName) => {
+        if (!fullName) return "";
+        if (fullName.includes(',')) {
+            return fullName.split(',')[0].trim().toLowerCase();
+        }
+        const parts = fullName.trim().split(/\s+/);
+        return parts[parts.length - 1].toLowerCase();
+    };
+
     const showToast = (msg, type = 'success') => {
         app.toast.textContent = msg;
         app.toast.className = `toast show ${type}`;
@@ -152,12 +236,15 @@ document.addEventListener('DOMContentLoaded', () => {
             if (app.employee.raterRole) {
                 app.employee.raterRole.textContent = currentUser.position || 'Employee';
             }
-            updateLiveTotal(); // reset total
-            renderEmployeeApplicantDropdown();
+            currentEmployeePage = 0;
+            renderEmployeeRatingTable();
         } else if (viewName === 'admin') {
             app.admin.welcome.textContent = `Welcome, ${currentUser.fullName || currentUser.username}`;
             renderAdminTable();
             renderAdminApplicantsTable();
+            
+            const overviewTabBtn = document.querySelector('.admin-tab-btn[data-tab="overview"]');
+            if (overviewTabBtn) overviewTabBtn.click();
         } else if (viewName === 'settings') {
             app.settings.fullname.value = currentUser.fullName || currentUser.username;
             app.settings.password.value = '';
@@ -211,15 +298,17 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // Custom Confirm Modal Logic
-    const showConfirm = (title, message, onConfirm) => {
+    const showConfirm = (title, message, onConfirm, okText = 'Confirm') => {
         app.confirmModal.title.textContent = title;
         app.confirmModal.message.innerHTML = message; // Allow HTML styling
+        app.confirmModal.okBtn.textContent = okText;
         app.confirmModal.el.classList.add('show');
         
         const cleanup = () => {
             app.confirmModal.el.classList.remove('show');
             app.confirmModal.okBtn.removeEventListener('click', okHandler);
             app.confirmModal.cancelBtn.removeEventListener('click', cancelHandler);
+            setTimeout(() => { app.confirmModal.okBtn.textContent = 'Confirm'; }, 300);
         };
 
         const okHandler = () => {
@@ -330,157 +419,210 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ---- Employee Rating Logic ----
     const updateLiveTotal = () => {
-        let total = 0;
-        app.employee.numberInputs.forEach(input => {
-            let val = parseInt(input.value) || 0;
-            const max = parseInt(input.max);
-            if (val > max) {
-                input.value = max; // clamp
-                val = max;
-            } else if (val < 0) {
-                input.value = 0;
-                val = 0;
-            } else if (input.value !== "") {
-                input.value = val; // remove leading zeros
+        app.employee.numberInputs = document.querySelectorAll('.rating-table input[type="number"]');
+        const startIdx = currentEmployeePage * APPLICANTS_PER_PAGE;
+        const pageApplicants = currentPendingApplicants.slice(startIdx, startIdx + APPLICANTS_PER_PAGE);
+
+        pageApplicants.forEach((_, colIndex) => {
+            let total = 0;
+            for (let i = 0; i < RATING_CRITERIA.length; i++) {
+                const input = document.getElementById(`score-${i}-${colIndex}`);
+                if (input && input.value !== "") {
+                    let val = parseFloat(input.value);
+                    const max = parseFloat(input.max);
+                    if (val > max) {
+                        input.value = max;
+                        val = max;
+                    } else if (val < 0) {
+                        input.value = 0;
+                        val = 0;
+                    }
+                    total += val || 0;
+                }
             }
-            total += val;
+            const totalDisplay = document.getElementById(`total-${colIndex}`);
+            if (totalDisplay) {
+                totalDisplay.textContent = total;
+            }
         });
-        app.employee.liveTotal.textContent = `${total} / 20`;
     };
 
-    app.employee.numberInputs.forEach(input => {
-        input.addEventListener('input', updateLiveTotal);
-    });
+    const renderEmployeeRatingTable = () => {
+        if (!app.employee.dynamicTable) return;
 
-    const renderEmployeeApplicantDropdown = () => {
         const applicants = JSON.parse(localStorage.getItem('ratingSystem_applicants')) || [];
         const ratings = JSON.parse(localStorage.getItem('ratingSystem_ratings')) || [];
         
-        // Filter out applicants that the current user has already rated
         const raterName = currentUser.fullName || currentUser.username;
         const ratedCombos = ratings
             .filter(r => r.rater === raterName)
             .map(r => `${r.applicant}|${r.position}`);
             
-        const unratedApplicants = applicants.filter(a => !ratedCombos.includes(`${a.name}|${a.position}`));
+        currentPendingApplicants = applicants.filter(a => !ratedCombos.includes(`${a.name}|${a.position}`));
         
-        if (app.employee.applicantSelect) {
-            if (unratedApplicants.length === 0) {
-                app.employee.applicantSelect.innerHTML = '<option value="" disabled selected>No pending applicants to rate</option>';
-                app.employee.positionApplied.innerHTML = '<option value="" disabled selected>Select an applicant first</option>';
-                if (app.employee.preSubmitBtn) app.employee.preSubmitBtn.disabled = true;
-            } else {
-                app.employee.applicantSelect.innerHTML = ''; // No placeholder
-                if (app.employee.preSubmitBtn) app.employee.preSubmitBtn.disabled = false;
-                
-                const uniqueNames = [...new Set(unratedApplicants.map(a => a.name))];
-                uniqueNames.forEach(name => {
-                    const option = document.createElement('option');
-                    option.value = name;
-                    option.textContent = name;
-                    app.employee.applicantSelect.appendChild(option);
-                });
+        // Sort alphabetically by applicant last name
+        currentPendingApplicants.sort((a, b) => getLastName(a.name).localeCompare(getLastName(b.name)));
 
-                // Auto-trigger change to populate position dropdown
-                app.employee.applicantSelect.dispatchEvent(new Event('change'));
-            }
+        if (currentPendingApplicants.length === 0) {
+            app.employee.dynamicTable.innerHTML = '<tr><td style="text-align: center; padding: 40px; color: var(--text-muted);">No pending applicants to rate</td></tr>';
+            if (app.employee.preSubmitBtn) app.employee.preSubmitBtn.disabled = true;
+            if (app.employee.prevPageBtn) app.employee.prevPageBtn.style.display = 'none';
+            if (app.employee.nextPageBtn) app.employee.nextPageBtn.style.display = 'none';
+            if (app.employee.pageIndicator) app.employee.pageIndicator.style.display = 'none';
+            return;
         }
+
+        if (app.employee.preSubmitBtn) app.employee.preSubmitBtn.disabled = false;
+        
+        const totalPages = Math.ceil(currentPendingApplicants.length / APPLICANTS_PER_PAGE);
+        if (currentEmployeePage >= totalPages) currentEmployeePage = totalPages - 1;
+        
+        if (app.employee.prevPageBtn && app.employee.nextPageBtn) {
+            app.employee.prevPageBtn.style.display = 'inline-flex';
+            app.employee.nextPageBtn.style.display = 'inline-flex';
+            app.employee.pageIndicator.style.display = 'inline-block';
+            
+            app.employee.prevPageBtn.disabled = currentEmployeePage === 0;
+            app.employee.nextPageBtn.disabled = currentEmployeePage >= totalPages - 1;
+            app.employee.pageIndicator.textContent = `Page ${currentEmployeePage + 1} of ${totalPages}`;
+        }
+
+        const startIdx = currentEmployeePage * APPLICANTS_PER_PAGE;
+        const pageApplicants = currentPendingApplicants.slice(startIdx, startIdx + APPLICANTS_PER_PAGE);
+
+        let tableHTML = `
+            <thead>
+                <tr>
+                    <th>CRITERIA/ATTRIBUTES</th>
+                    <th class="points-col">POINTS</th>`;
+                    
+        pageApplicants.forEach(app => {
+            let tooltip = app.credentials && app.credentials.length > 0 
+                ? 'Credentials:&#10;• ' + app.credentials.join('&#10;• ') 
+                : 'No credentials';
+            tableHTML += `<th style="text-align: center; min-width: 120px;" class="tooltip-container" data-tooltip="${tooltip}">${app.name}<br><small style="font-weight: 400; color: var(--text-muted);">${app.position}</small></th>`;
+        });
+        
+        tableHTML += `
+                </tr>
+            </thead>
+            <tbody>`;
+
+        RATING_CRITERIA.forEach((criteria, rowIdx) => {
+            tableHTML += `
+                <tr>
+                    <td>${criteria}</td>
+                    <td class="points-col">${MAX_POINTS[rowIdx]}</td>`;
+                    
+            pageApplicants.forEach((_, colIdx) => {
+                tableHTML += `<td style="text-align: center;"><input type="number" id="score-${rowIdx}-${colIdx}" min="0" max="${MAX_POINTS[rowIdx]}" step="0.5" required></td>`;
+            });
+            tableHTML += `</tr>`;
+        });
+
+        tableHTML += `
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td colspan="2" class="total-label" style="text-align: right; padding-right: 20px;">Total Score</td>`;
+                    
+        pageApplicants.forEach((_, colIdx) => {
+            tableHTML += `<td style="text-align: center; font-weight: bold;"><span id="total-${colIdx}">0</span> / 20</td>`;
+        });
+
+        tableHTML += `
+                </tr>
+            </tfoot>`;
+            
+        app.employee.dynamicTable.innerHTML = tableHTML;
+        
+        app.employee.numberInputs = document.querySelectorAll('.rating-table input[type="number"]');
+        app.employee.numberInputs.forEach(input => {
+            input.addEventListener('input', updateLiveTotal);
+        });
     };
 
-    if (app.employee.applicantSelect) {
-        app.employee.applicantSelect.addEventListener('change', (e) => {
-            const selectedName = e.target.value;
-            app.employee.positionApplied.innerHTML = ''; // No placeholder
-            
-            if (selectedName) {
-                const applicants = JSON.parse(localStorage.getItem('ratingSystem_applicants')) || [];
-                const ratings = JSON.parse(localStorage.getItem('ratingSystem_ratings')) || [];
-                
-                const raterName = currentUser.fullName || currentUser.username;
-                const ratedPositions = ratings
-                    .filter(r => r.rater === raterName && r.applicant === selectedName)
-                    .map(r => r.position);
-                    
-                const unratedPositions = [...new Set(applicants
-                    .filter(a => a.name === selectedName && !ratedPositions.includes(a.position))
-                    .map(a => a.position))];
-                    
-                unratedPositions.forEach(pos => {
-                    const option = document.createElement('option');
-                    option.value = pos;
-                    option.textContent = pos;
-                    app.employee.positionApplied.appendChild(option);
-                });
+    if (app.employee.prevPageBtn) {
+        app.employee.prevPageBtn.addEventListener('click', () => {
+            if (currentEmployeePage > 0) {
+                currentEmployeePage--;
+                renderEmployeeRatingTable();
             }
         });
     }
 
-    // Pre-Submit validation and Custom Confirmation
+    if (app.employee.nextPageBtn) {
+        app.employee.nextPageBtn.addEventListener('click', () => {
+            const totalPages = Math.ceil(currentPendingApplicants.length / APPLICANTS_PER_PAGE);
+            if (currentEmployeePage < totalPages - 1) {
+                currentEmployeePage++;
+                renderEmployeeRatingTable();
+            }
+        });
+    }
+
     if (app.employee.preSubmitBtn) {
         app.employee.preSubmitBtn.addEventListener('click', () => {
             if(!app.employee.form.checkValidity()) {
-                app.employee.form.reportValidity(); // show default HTML5 validations
+                app.employee.form.reportValidity();
                 return;
             }
 
-            const applicant = app.employee.applicantSelect.value;
+            const startIdx = currentEmployeePage * APPLICANTS_PER_PAGE;
+            const pageApplicants = currentPendingApplicants.slice(startIdx, startIdx + APPLICANTS_PER_PAGE);
             
-            if (!applicant) {
-                showToast('Please select an applicant to rate', 'error');
-                return;
-            }
-        
-        let totalScore = 0;
-        app.employee.numberInputs.forEach(input => {
-            totalScore += parseInt(input.value) || 0;
-        });
+            if (pageApplicants.length === 0) return;
 
-        const confirmMessage = `
-            You are about to submit a rating for <strong>${applicant}</strong>.<br><br>
-            Total Score: <span style="font-size: 1.5rem; color: var(--secondary-color); font-weight: bold;">${totalScore}/20</span>
-        `;
+            const confirmMessage = `
+                You are about to submit ratings for <strong>${pageApplicants.length} applicant(s)</strong>.<br><br>
+                Please ensure all scores are correct before submitting.
+            `;
 
-        showConfirm('Submit Rating?', confirmMessage, () => {
-            // Trigger actual submission logic
-            submitRating();
+            showConfirm('Submit Ratings?', confirmMessage, () => {
+                submitRating();
+            });
         });
-    });
     }
 
     const submitRating = () => {
-        const position = app.employee.positionApplied.value.trim();
-        const applicant = app.employee.applicantSelect.value;
+        const startIdx = currentEmployeePage * APPLICANTS_PER_PAGE;
+        const pageApplicants = currentPendingApplicants.slice(startIdx, startIdx + APPLICANTS_PER_PAGE);
+        const ratings = JSON.parse(localStorage.getItem('ratingSystem_ratings')) || [];
         
-        let scores = [];
-        let totalScore = 0;
-        const maxScore = 20;
+        pageApplicants.forEach((applicant, colIdx) => {
+            let scores = [];
+            let totalScore = 0;
+            const maxScore = 20;
 
-        app.employee.numberInputs.forEach(input => {
-            const val = parseInt(input.value) || 0;
-            scores.push(val);
-            totalScore += val;
+            for (let rowIdx = 0; rowIdx < RATING_CRITERIA.length; rowIdx++) {
+                const input = document.getElementById(`score-${rowIdx}-${colIdx}`);
+                const val = input ? (parseFloat(input.value) || 0) : 0;
+                scores.push(val);
+                totalScore += val;
+            }
+
+            const ratingRecord = {
+                id: Date.now().toString() + '-' + colIdx,
+                date: new Date().toLocaleDateString(),
+                rater: currentUser.fullName || currentUser.username,
+                raterPosition: currentUser.position || 'Employee',
+                position: applicant.position,
+                applicant: applicant.name,
+                credentials: applicant.credentials ? [...applicant.credentials] : [],
+                scores,
+                totalScore,
+                maxScore
+            };
+            ratings.push(ratingRecord);
         });
 
-        const ratingRecord = {
-            id: Date.now().toString(),
-            date: new Date().toLocaleDateString(),
-            rater: currentUser.fullName || currentUser.username,
-            raterPosition: currentUser.position || 'Employee',
-            position,
-            applicant,
-            scores,
-            totalScore,
-            maxScore
-        };
-
-        const ratings = JSON.parse(localStorage.getItem('ratingSystem_ratings'));
-        ratings.push(ratingRecord);
         localStorage.setItem('ratingSystem_ratings', JSON.stringify(ratings));
 
-        showToast('Rating submitted successfully!');
+        showToast(`Successfully submitted ${pageApplicants.length} ratings!`);
         app.employee.form.reset();
-        updateLiveTotal();
-        renderEmployeeApplicantDropdown(); // Update list to remove rated applicant
+        
+        currentEmployeePage = 0;
+        renderEmployeeRatingTable(); 
     };
 
     // Employee form actual submit event (prevent default just in case)
@@ -517,7 +659,7 @@ document.addEventListener('DOMContentLoaded', () => {
             groupedRatings[key].applicants.push(rating);
         });
 
-        const sortedGroups = Object.values(groupedRatings).reverse();
+        const sortedGroups = Object.values(groupedRatings).sort((a, b) => getLastName(a.rater).localeCompare(getLastName(b.rater)));
 
         sortedGroups.forEach(group => {
             const tr = document.createElement('tr');
@@ -532,7 +674,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div style="display: flex; gap: 8px; align-items: center;">
                         <button class="btn outline-btn view-btn" data-rater="${group.rater}">View Details</button>
                         <button class="btn outline-btn export-row-btn" data-rater="${group.rater}" style="padding: 8px 12px;" title="Export to Excel"><i class='bx bx-export'></i></button>
-                        <button class="btn danger-btn delete-group-btn" data-rater="${group.rater}" style="padding: 8px 12px;" title="Delete Submissions"><i class='bx bx-trash'></i></button>
                     </div>
                 </td>
             `;
@@ -552,12 +693,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 exportRaterToExcel(rater);
             });
         });
-        document.querySelectorAll('.delete-group-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const rater = e.currentTarget.getAttribute('data-rater');
-                deleteRatingGroup(rater);
-            });
-        });
     };
 
     const exportRaterToExcel = (rater) => {
@@ -567,6 +702,9 @@ document.addEventListener('DOMContentLoaded', () => {
             showToast('No data to export', 'error');
             return;
         }
+
+        // Sort alphabetically by applicant last name
+        raterRatings.sort((a, b) => getLastName(a.applicant).localeCompare(getLastName(b.applicant)));
 
         const criteriaNames = [
             "COMMUNICATION SKILLS",
@@ -691,6 +829,7 @@ document.addEventListener('DOMContentLoaded', () => {
             localStorage.setItem('ratingSystem_deletedRatings', JSON.stringify(deletedRatings));
             
             renderAdminTable();
+            app.modal.el.classList.remove('show');
             showToast('Submissions moved to history.', 'success');
         });
     };
@@ -713,7 +852,7 @@ document.addEventListener('DOMContentLoaded', () => {
             tr.innerHTML = `
                 <td>${applicant.name}</td>
                 <td>${applicant.position}</td>
-                <td>${applicant.date}</td>
+                <td>${applicant.dateAdded || applicant.date || ''}</td>
                 <td>
                     <div style="display: flex; gap: 8px; align-items: center;">
                         <button class="btn outline-btn edit-applicant-btn" data-id="${applicant.id}" style="padding: 8px 12px;"><i class='bx bx-edit'></i></button>
@@ -734,12 +873,20 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const deleteApplicant = (id) => {
-        showConfirm('Delete Applicant Form', 'Are you sure you want to delete this applicant form? Employees will no longer be able to rate them.', () => {
+        showConfirm('Delete Applicant Form', 'Are you sure you want to delete this applicant form? It will be moved to history and employees will no longer be able to rate them.', () => {
             let applicants = JSON.parse(localStorage.getItem('ratingSystem_applicants')) || [];
-            applicants = applicants.filter(a => a.id !== id);
-            localStorage.setItem('ratingSystem_applicants', JSON.stringify(applicants));
-            renderAdminApplicantsTable();
-            showToast('Applicant form deleted', 'success');
+            let deletedApplicants = JSON.parse(localStorage.getItem('ratingSystem_deletedApplicants')) || [];
+            
+            const index = applicants.findIndex(a => a.id === id);
+            if (index > -1) {
+                const deleted = applicants.splice(index, 1)[0];
+                deleted.dateDeleted = new Date().toLocaleDateString();
+                deletedApplicants.push(deleted);
+                localStorage.setItem('ratingSystem_applicants', JSON.stringify(applicants));
+                localStorage.setItem('ratingSystem_deletedApplicants', JSON.stringify(deletedApplicants));
+                renderAdminApplicantsTable();
+                showToast('Applicant form moved to history.', 'success');
+            }
         });
     };
 
@@ -754,17 +901,84 @@ document.addEventListener('DOMContentLoaded', () => {
         
         app.admin.newApplicantName.value = applicant.name;
         app.admin.newApplicantPosition.value = applicant.position;
+        app.admin.newCredentialInput.value = '';
+        currentFormCredentials = applicant.credentials ? [...applicant.credentials] : [];
+        renderCredentialsList();
         
         app.admin.addApplicantModal.classList.add('show');
         setTimeout(() => app.admin.newApplicantName.focus(), 50);
     };
 
+    const renderCredentialsList = () => {
+        if (!app.admin.credentialsList) return;
+        app.admin.credentialsList.innerHTML = '';
+        currentFormCredentials.forEach((cred, index) => {
+            const li = document.createElement('li');
+            li.style.display = 'flex';
+            li.style.justifyContent = 'space-between';
+            li.style.alignItems = 'center';
+            li.style.background = 'rgba(0,0,0,0.05)';
+            li.style.padding = '5px 10px';
+            li.style.borderRadius = '4px';
+            li.style.fontSize = '0.9rem';
+            
+            const text = document.createElement('span');
+            text.textContent = cred;
+            
+            const removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.innerHTML = '<i class="bx bx-x"></i>';
+            removeBtn.style.background = 'none';
+            removeBtn.style.border = 'none';
+            removeBtn.style.color = 'var(--accent-color)';
+            removeBtn.style.cursor = 'pointer';
+            removeBtn.style.fontSize = '1.2rem';
+            removeBtn.style.padding = '0';
+            
+            removeBtn.addEventListener('click', () => {
+                currentFormCredentials.splice(index, 1);
+                renderCredentialsList();
+            });
+            
+            li.appendChild(text);
+            li.appendChild(removeBtn);
+            app.admin.credentialsList.appendChild(li);
+        });
+    };
+
+    if (app.admin.addCredentialBtn) {
+        app.admin.addCredentialBtn.addEventListener('click', () => {
+            const val = app.admin.newCredentialInput.value.trim();
+            if (val) {
+                if (currentFormCredentials.some(c => c.toLowerCase() === val.toLowerCase())) {
+                    showToast('Credential already added', 'error');
+                    return;
+                }
+                currentFormCredentials.push(val);
+                app.admin.newCredentialInput.value = '';
+                renderCredentialsList();
+            }
+        });
+    }
+
+    if (app.admin.newCredentialInput) {
+        app.admin.newCredentialInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                app.admin.addCredentialBtn.click();
+            }
+        });
+    }
+
     if (app.admin.openAddApplicantBtn) {
         app.admin.openAddApplicantBtn.addEventListener('click', () => {
             editingApplicantId = null;
+            currentFormCredentials = [];
+            renderCredentialsList();
             document.querySelector('#add-applicant-modal h2').textContent = 'Add Rating Form';
             document.querySelector('#add-applicant-form button[type="submit"]').textContent = 'Create Form';
             app.admin.addApplicantForm.reset();
+            app.admin.newCredentialInput.value = '';
             app.admin.addApplicantModal.classList.add('show');
             setTimeout(() => app.admin.newApplicantName.focus(), 50);
         });
@@ -798,16 +1012,37 @@ document.addEventListener('DOMContentLoaded', () => {
                     const oldName = applicants[index].name;
                     const oldPosition = applicants[index].position;
                     
-                    applicants[index].name = name;
+                    // Cascade name change to all applicants with the same old name
+                    applicants.forEach(a => {
+                        if (a.name.toLowerCase() === oldName.toLowerCase()) {
+                            a.name = name;
+                        }
+                    });
+                    
+                    // Update the position for the specific applicant record being edited
                     applicants[index].position = position;
+                    
+                    // Sync credentials to ALL applicants with this name
+                    applicants.forEach(a => {
+                        if (a.name.toLowerCase() === name.toLowerCase()) {
+                            a.credentials = [...currentFormCredentials];
+                        }
+                    });
                     
                     // Cascade update to existing ratings
                     let ratings = JSON.parse(localStorage.getItem('ratingSystem_ratings')) || [];
                     let updatedRatings = false;
                     ratings.forEach(r => {
-                        if (r.applicant === oldName && r.position === oldPosition) {
+                        if (r.applicant.toLowerCase() === oldName.toLowerCase()) {
                             r.applicant = name;
+                            updatedRatings = true;
+                        }
+                        if (r.applicant.toLowerCase() === name.toLowerCase() && r.position === oldPosition) {
                             r.position = position;
+                            updatedRatings = true;
+                        }
+                        if (r.applicant.toLowerCase() === name.toLowerCase()) {
+                            r.credentials = [...currentFormCredentials];
                             updatedRatings = true;
                         }
                     });
@@ -820,14 +1055,42 @@ document.addEventListener('DOMContentLoaded', () => {
                     let deletedRatings = JSON.parse(localStorage.getItem('ratingSystem_deletedRatings')) || [];
                     let updatedDeleted = false;
                     deletedRatings.forEach(r => {
-                        if (r.applicant === oldName && r.position === oldPosition) {
+                        if (r.applicant.toLowerCase() === oldName.toLowerCase()) {
                             r.applicant = name;
+                            updatedDeleted = true;
+                        }
+                        if (r.applicant.toLowerCase() === name.toLowerCase() && r.position === oldPosition) {
                             r.position = position;
+                            updatedDeleted = true;
+                        }
+                        if (r.applicant.toLowerCase() === name.toLowerCase()) {
+                            r.credentials = [...currentFormCredentials];
                             updatedDeleted = true;
                         }
                     });
                     if (updatedDeleted) {
                         localStorage.setItem('ratingSystem_deletedRatings', JSON.stringify(deletedRatings));
+                    }
+
+                    // Cascade update to deleted applicants
+                    let deletedApplicants = JSON.parse(localStorage.getItem('ratingSystem_deletedApplicants')) || [];
+                    let updatedDeletedApps = false;
+                    deletedApplicants.forEach(a => {
+                        if (a.name.toLowerCase() === oldName.toLowerCase()) {
+                            a.name = name;
+                            updatedDeletedApps = true;
+                        }
+                        if (a.name.toLowerCase() === name.toLowerCase() && a.position === oldPosition) {
+                            a.position = position;
+                            updatedDeletedApps = true;
+                        }
+                        if (a.name.toLowerCase() === name.toLowerCase()) {
+                            a.credentials = [...currentFormCredentials];
+                            updatedDeletedApps = true;
+                        }
+                    });
+                    if (updatedDeletedApps) {
+                        localStorage.setItem('ratingSystem_deletedApplicants', JSON.stringify(deletedApplicants));
                     }
                 }
                 
@@ -839,11 +1102,49 @@ document.addEventListener('DOMContentLoaded', () => {
                     return;
                 }
 
+                // Gather existing credentials from others with the same name
+                let existingCreds = new Set([...currentFormCredentials]);
+                applicants.forEach(a => {
+                    if (a.name.toLowerCase() === name.toLowerCase() && a.credentials) {
+                        a.credentials.forEach(c => existingCreds.add(c));
+                    }
+                });
+                const unifiedCredentials = Array.from(existingCreds);
+
+                // Update all existing applicants with the same name
+                applicants.forEach(a => {
+                    if (a.name.toLowerCase() === name.toLowerCase()) {
+                        a.credentials = [...unifiedCredentials];
+                    }
+                });
+
+                // Update all existing ratings and deleted ratings
+                let ratings = JSON.parse(localStorage.getItem('ratingSystem_ratings')) || [];
+                let updatedRatings = false;
+                ratings.forEach(r => {
+                    if (r.applicant.toLowerCase() === name.toLowerCase()) {
+                        r.credentials = [...unifiedCredentials];
+                        updatedRatings = true;
+                    }
+                });
+                if (updatedRatings) localStorage.setItem('ratingSystem_ratings', JSON.stringify(ratings));
+
+                let deletedRatings = JSON.parse(localStorage.getItem('ratingSystem_deletedRatings')) || [];
+                let updatedDeleted = false;
+                deletedRatings.forEach(r => {
+                    if (r.applicant.toLowerCase() === name.toLowerCase()) {
+                        r.credentials = [...unifiedCredentials];
+                        updatedDeleted = true;
+                    }
+                });
+                if (updatedDeleted) localStorage.setItem('ratingSystem_deletedRatings', JSON.stringify(deletedRatings));
+
                 applicants.push({
                     id: Date.now().toString(),
                     name,
                     position,
-                    date: new Date().toLocaleDateString()
+                    credentials: [...unifiedCredentials],
+                    dateAdded: new Date().toLocaleDateString()
                 });
 
                 localStorage.setItem('ratingSystem_applicants', JSON.stringify(applicants));
@@ -867,6 +1168,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 localStorage.setItem('ratingSystem_ratings', JSON.stringify(ratings));
                 localStorage.setItem('ratingSystem_deletedRatings', JSON.stringify(deletedRatings));
                 renderAdminTable();
+                
+                // If modal is open, refresh it or close it if no ratings left
+                const remainingRatings = ratings.filter(r => r.rater === deleted.rater);
+                if (remainingRatings.length > 0) {
+                    openDetailsModal(deleted.rater);
+                } else {
+                    app.modal.el.classList.remove('show');
+                }
+
                 showToast('Rating moved to history.', 'success');
             }
         });
@@ -930,26 +1240,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
         deletedRatings.sort((a, b) => b.id - a.id).forEach(rating => {
             const tr = document.createElement('tr');
-            
-            let scoreColor = 'var(--text-primary)';
-            if (rating.totalScore >= 16) scoreColor = 'var(--success)';
-            else if (rating.totalScore <= 10) scoreColor = 'var(--accent-color)';
 
             tr.innerHTML = `
                 <td>${rating.date}</td>
                 <td>${rating.rater}</td>
                 <td>${rating.applicant}</td>
-                <td style="color: ${scoreColor}; font-weight: bold;">${rating.totalScore} / ${rating.maxScore}</td>
+                <td style="font-weight: bold;">${rating.totalScore} / ${rating.maxScore}</td>
                 <td>
                     <div style="display: flex; gap: 8px; align-items: center;">
-                        <button class="btn outline-btn restore-btn" data-id="${rating.id}" style="padding: 8px 12px;"><i class='bx bx-undo'></i></button>
-                        <button class="btn danger-btn perm-delete-btn" data-id="${rating.id}" style="padding: 8px 12px;"><i class='bx bx-trash'></i></button>
+                        <button class="btn outline-btn view-rating-btn" data-id="${rating.id}" style="padding: 8px 12px;" title="View"><i class='bx bx-show'></i></button>
+                        <button class="btn outline-btn restore-btn" data-id="${rating.id}" style="padding: 8px 12px;" title="Restore"><i class='bx bx-undo'></i></button>
+                        <button class="btn danger-btn perm-delete-btn" data-id="${rating.id}" style="padding: 8px 12px;" title="Delete Permanently"><i class='bx bx-trash'></i></button>
                     </div>
                 </td>
             `;
             app.admin.historyTbody.appendChild(tr);
         });
 
+        document.querySelectorAll('.view-rating-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => viewSingleRating(e.currentTarget.getAttribute('data-id')));
+        });
         document.querySelectorAll('.restore-btn').forEach(btn => {
             btn.addEventListener('click', (e) => restoreRating(e.currentTarget.getAttribute('data-id')));
         });
@@ -959,21 +1269,96 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const restoreRating = (id) => {
-        showConfirm('Restore Rating', 'Are you sure you want to restore this rating?', () => {
-            const ratings = JSON.parse(localStorage.getItem('ratingSystem_ratings'));
-            const deletedRatings = JSON.parse(localStorage.getItem('ratingSystem_deletedRatings')) || [];
+        const ratings = JSON.parse(localStorage.getItem('ratingSystem_ratings')) || [];
+        const deletedRatings = JSON.parse(localStorage.getItem('ratingSystem_deletedRatings')) || [];
+        
+        const ratingIndex = deletedRatings.findIndex(r => r.id === id);
+        if (ratingIndex > -1) {
+            const restored = deletedRatings[ratingIndex];
+            const existingActiveIndex = ratings.findIndex(r => r.rater === restored.rater && r.applicant === restored.applicant && r.position === restored.position);
             
-            const ratingIndex = deletedRatings.findIndex(r => r.id === id);
-            if (ratingIndex > -1) {
-                const restored = deletedRatings.splice(ratingIndex, 1)[0];
-                ratings.push(restored);
-                localStorage.setItem('ratingSystem_ratings', JSON.stringify(ratings));
-                localStorage.setItem('ratingSystem_deletedRatings', JSON.stringify(deletedRatings));
-                renderHistoryTable();
-                renderAdminTable();
-                showToast('Rating restored successfully.', 'success');
+            if (existingActiveIndex > -1) {
+                showConfirm('Rating Form Exists', 'This rating form already exists. Do you want to overwrite it?', () => {
+                    ratings.splice(existingActiveIndex, 1);
+                    const finalRestored = deletedRatings.splice(ratingIndex, 1)[0];
+                    ratings.push(finalRestored);
+                    localStorage.setItem('ratingSystem_ratings', JSON.stringify(ratings));
+                    localStorage.setItem('ratingSystem_deletedRatings', JSON.stringify(deletedRatings));
+                    renderHistoryTable();
+                    renderAdminTable();
+                    showToast('Rating overwritten and restored.', 'success');
+                }, 'Overwrite');
+            } else {
+                showConfirm('Restore Rating', 'Are you sure you want to restore this rating?', () => {
+                    const finalRestored = deletedRatings.splice(ratingIndex, 1)[0];
+                    ratings.push(finalRestored);
+                    localStorage.setItem('ratingSystem_ratings', JSON.stringify(ratings));
+                    localStorage.setItem('ratingSystem_deletedRatings', JSON.stringify(deletedRatings));
+                    renderHistoryTable();
+                    renderAdminTable();
+                    showToast('Rating restored successfully.', 'success');
+                });
             }
+        }
+    };
+
+    const viewSingleRating = (id) => {
+        const deletedRatings = JSON.parse(localStorage.getItem('ratingSystem_deletedRatings')) || [];
+        const rating = deletedRatings.find(r => r.id === id);
+        if (!rating) return;
+        
+        let detailsHtml = `
+            <div style="margin-bottom: 20px;">
+                <h3 style="text-transform: uppercase; margin-bottom: 5px;">DELETED RATING - BEI</h3>
+            </div>
+            <div class="table-responsive">
+                <table class="data-table" style="min-width: 600px;">
+                    <thead>
+                        <tr>
+                            <th style="width: 50%;">CRITERIA/ATTRIBUTES</th>
+                            <th style="width: 25%; text-align: center;">POINTS</th>
+                            <th style="text-align: center;">${rating.applicant}<br><span style="font-size: 0.8rem; font-weight: normal; color: var(--text-muted);">${rating.position}</span></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+        
+        const maxPoints = [3, 2, 2, 1, 1, 1, 3, 2, 2, 2, 1];
+        
+        criteriaNames.forEach((criteria, index) => {
+            detailsHtml += `
+                <tr>
+                    <td>${criteria}</td>
+                    <td style="text-align: center; font-weight: 600; color: var(--text-muted);">${maxPoints[index]}</td>
+                    <td style="text-align: center; font-weight: bold;">${rating.scores[index] !== undefined ? rating.scores[index] : '-'}</td>
+                </tr>
+            `;
         });
+        
+        detailsHtml += `
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <td colspan="2" style="text-align: right; font-weight: bold; background: rgba(0,0,0,0.04);">TOTAL SCORE:</td>
+                            <td style="text-align: center; font-weight: bold; background: rgba(0,0,0,0.04);">${rating.totalScore} / ${rating.maxScore}</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            
+            <div style="margin-top: 30px; margin-bottom: 10px;">
+                <div>
+                    <p style="color: var(--text-secondary); font-weight: 600; font-size: 0.9rem; margin-bottom: 5px;">RATER:</p>
+                    <div style="border-bottom: 1px solid var(--text-primary); display: inline-block; padding-bottom: 5px; padding-right: 40px; margin-bottom: 5px;">
+                        <span style="font-weight: 700; font-size: 1.1rem; text-transform: uppercase;">${rating.rater}</span>
+                    </div>
+                    <p style="color: var(--text-muted); font-size: 0.85rem;">${rating.raterPosition || 'Employee'}</p>
+                </div>
+            </div>
+        `;
+
+        app.modal.body.innerHTML = detailsHtml;
+        app.modal.el.classList.add('show');
     };
 
     const permDeleteRating = (id) => {
@@ -1023,6 +1408,131 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    const renderApplicantHistoryTable = () => {
+        const deletedApplicants = JSON.parse(localStorage.getItem('ratingSystem_deletedApplicants')) || [];
+        app.admin.applicantHistoryTbody.innerHTML = '';
+        
+        if (deletedApplicants.length === 0) {
+            app.admin.noApplicantHistoryMsg.classList.remove('hidden');
+            app.admin.applicantHistoryTbody.parentElement.classList.add('hidden');
+            return;
+        }
+
+        app.admin.noApplicantHistoryMsg.classList.add('hidden');
+        app.admin.applicantHistoryTbody.parentElement.classList.remove('hidden');
+
+        deletedApplicants.sort((a, b) => b.id - a.id).forEach(applicant => {
+            const tr = document.createElement('tr');
+
+            tr.innerHTML = `
+                <td>${applicant.name}</td>
+                <td>${applicant.position}</td>
+                <td>${applicant.dateDeleted || applicant.dateAdded || ''}</td>
+                <td>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <button class="btn outline-btn restore-applicant-btn" data-id="${applicant.id}" style="padding: 8px 12px;"><i class='bx bx-undo'></i></button>
+                        <button class="btn danger-btn perm-delete-applicant-btn" data-id="${applicant.id}" style="padding: 8px 12px;"><i class='bx bx-trash'></i></button>
+                    </div>
+                </td>
+            `;
+            app.admin.applicantHistoryTbody.appendChild(tr);
+        });
+
+        document.querySelectorAll('.restore-applicant-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => restoreApplicant(e.currentTarget.getAttribute('data-id')));
+        });
+        document.querySelectorAll('.perm-delete-applicant-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => permDeleteApplicant(e.currentTarget.getAttribute('data-id')));
+        });
+    };
+
+    const restoreApplicant = (id) => {
+        const applicants = JSON.parse(localStorage.getItem('ratingSystem_applicants')) || [];
+        const deletedApplicants = JSON.parse(localStorage.getItem('ratingSystem_deletedApplicants')) || [];
+        
+        const index = deletedApplicants.findIndex(a => a.id === id);
+        if (index > -1) {
+            const applicantToRestore = deletedApplicants[index];
+            const existingActiveIndex = applicants.findIndex(a => a.name.toLowerCase() === applicantToRestore.name.toLowerCase() && a.position.toLowerCase() === applicantToRestore.position.toLowerCase());
+            
+            if (existingActiveIndex > -1) {
+                showConfirm('Applicant Rating Form Exists', 'This Applicant Rating Form already exists. Do you want to overwrite it?', () => {
+                    applicants.splice(existingActiveIndex, 1);
+                    const restored = deletedApplicants.splice(index, 1)[0];
+                    applicants.push(restored);
+                    localStorage.setItem('ratingSystem_applicants', JSON.stringify(applicants));
+                    localStorage.setItem('ratingSystem_deletedApplicants', JSON.stringify(deletedApplicants));
+                    renderApplicantHistoryTable();
+                    renderAdminApplicantsTable();
+                    showToast('Applicant overwritten and restored.', 'success');
+                }, 'Overwrite');
+            } else {
+                showConfirm('Restore Applicant', 'Are you sure you want to restore this applicant?', () => {
+                    const restored = deletedApplicants.splice(index, 1)[0];
+                    applicants.push(restored);
+                    localStorage.setItem('ratingSystem_applicants', JSON.stringify(applicants));
+                    localStorage.setItem('ratingSystem_deletedApplicants', JSON.stringify(deletedApplicants));
+                    renderApplicantHistoryTable();
+                    renderAdminApplicantsTable();
+                    showToast('Applicant restored successfully.', 'success');
+                });
+            }
+        }
+    };
+
+    const permDeleteApplicant = (id) => {
+        showConfirm('Delete Permanently', 'Are you sure you want to permanently delete this applicant? This cannot be undone.', () => {
+            const deletedApplicants = JSON.parse(localStorage.getItem('ratingSystem_deletedApplicants')) || [];
+            const filtered = deletedApplicants.filter(a => a.id !== id);
+            localStorage.setItem('ratingSystem_deletedApplicants', JSON.stringify(filtered));
+            renderApplicantHistoryTable();
+            showToast('Applicant permanently deleted.', 'success');
+        });
+    };
+
+    if (app.admin.applicantHistoryBtn) {
+        app.admin.applicantHistoryBtn.addEventListener('click', () => {
+            renderApplicantHistoryTable();
+            app.admin.applicantHistoryModal.classList.add('show');
+        });
+    }
+
+    if (app.admin.applicantHistoryClose) {
+        app.admin.applicantHistoryClose.addEventListener('click', () => {
+            app.admin.applicantHistoryModal.classList.remove('show');
+        });
+    }
+
+    if (app.admin.restoreAllApplicantsBtn) {
+        app.admin.restoreAllApplicantsBtn.addEventListener('click', () => {
+            const deletedApplicants = JSON.parse(localStorage.getItem('ratingSystem_deletedApplicants')) || [];
+            if (deletedApplicants.length === 0) return;
+
+            showConfirm('Restore All', 'Are you sure you want to restore all deleted applicants?', () => {
+                const applicants = JSON.parse(localStorage.getItem('ratingSystem_applicants')) || [];
+                applicants.push(...deletedApplicants);
+                localStorage.setItem('ratingSystem_applicants', JSON.stringify(applicants));
+                localStorage.setItem('ratingSystem_deletedApplicants', JSON.stringify([]));
+                renderApplicantHistoryTable();
+                renderAdminApplicantsTable();
+                showToast('All applicants restored.', 'success');
+            });
+        });
+    }
+
+    if (app.admin.deleteAllApplicantsHistoryBtn) {
+        app.admin.deleteAllApplicantsHistoryBtn.addEventListener('click', () => {
+            const deletedApplicants = JSON.parse(localStorage.getItem('ratingSystem_deletedApplicants')) || [];
+            if (deletedApplicants.length === 0) return;
+
+            showConfirm('Delete All Permanently', 'Are you sure you want to permanently delete all applicant history? This cannot be undone.', () => {
+                localStorage.setItem('ratingSystem_deletedApplicants', JSON.stringify([]));
+                renderApplicantHistoryTable();
+                showToast('Applicant history cleared permanently.', 'success');
+            });
+        });
+    }
+
     // ---- Modal Logic ----
     const criteriaNames = [
         "COMMUNICATION SKILLS",
@@ -1042,6 +1552,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const ratings = JSON.parse(localStorage.getItem('ratingSystem_ratings')) || [];
         const raterRatings = ratings.filter(r => r.rater === rater);
         
+        // Sort alphabetically by applicant last name
+        raterRatings.sort((a, b) => getLastName(a.applicant).localeCompare(getLastName(b.applicant)));
+        
         if (raterRatings.length === 0) return;
 
         let detailsHtml = `
@@ -1056,9 +1569,15 @@ document.addEventListener('DOMContentLoaded', () => {
                             <th style="width: 10%; text-align: center;">POINTS</th>
         `;
         
+        const applicants = JSON.parse(localStorage.getItem('ratingSystem_applicants')) || [];
         // Add headers for each applicant
         raterRatings.forEach(r => {
-            detailsHtml += `<th style="text-align: center;">${r.applicant}<br><span style="font-size: 0.8rem; font-weight: normal; color: var(--text-muted);">${r.position}</span></th>`;
+            const applicantObj = applicants.find(a => a.name === r.applicant && a.position === r.position);
+            let creds = r.credentials || (applicantObj ? applicantObj.credentials : []);
+            let tooltip = creds && creds.length > 0 
+                ? 'Credentials:&#10;• ' + creds.join('&#10;• ') 
+                : 'No credentials';
+            detailsHtml += `<th style="text-align: center;" class="tooltip-container" data-tooltip="${tooltip}">${r.applicant}<br><span style="font-size: 0.8rem; font-weight: normal; color: var(--text-muted);">${r.position}</span></th>`;
         });
         
         detailsHtml += `
@@ -1091,28 +1610,53 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
         
         raterRatings.forEach(r => {
-            let scoreColor = 'var(--text-primary)';
-            if (r.totalScore >= 16) scoreColor = 'var(--success)';
-            else if (r.totalScore <= 10) scoreColor = 'var(--accent-color)';
-            detailsHtml += `<td style="text-align: center; font-weight: bold; color: ${scoreColor}; background: rgba(0,0,0,0.04);">${r.totalScore} / ${r.maxScore}</td>`;
+            detailsHtml += `<td style="text-align: center; font-weight: bold; background: rgba(0,0,0,0.04);">${r.totalScore} / ${r.maxScore}</td>`;
         });
         
+        detailsHtml += `
+                        </tr>
+                        <tr>
+                            <td colspan="2" style="text-align: right; font-weight: bold; background: rgba(0,0,0,0.02);">ACTION:</td>
+        `;
+        
+        raterRatings.forEach(r => {
+            detailsHtml += `<td style="text-align: center; background: rgba(0,0,0,0.02);"><button class="btn danger-btn delete-individual-btn" data-id="${r.id}" style="padding: 4px 8px; font-size: 0.8rem;" title="Delete Applicant Rating"><i class='bx bx-trash'></i> Delete</button></td>`;
+        });
+
         detailsHtml += `
                         </tr>
                     </tfoot>
                 </table>
             </div>
             
-            <div style="margin-top: 30px; margin-bottom: 10px;">
-                <p style="color: var(--text-secondary); font-weight: 600; font-size: 0.9rem; margin-bottom: 5px;">RATER:</p>
-                <div style="border-bottom: 1px solid var(--text-primary); display: inline-block; padding-bottom: 5px; padding-right: 40px; margin-bottom: 5px;">
-                    <span style="font-weight: 700; font-size: 1.1rem; text-transform: uppercase;">${rater}</span>
+            <div style="margin-top: 30px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: flex-end;">
+                <div>
+                    <p style="color: var(--text-secondary); font-weight: 600; font-size: 0.9rem; margin-bottom: 5px;">RATER:</p>
+                    <div style="border-bottom: 1px solid var(--text-primary); display: inline-block; padding-bottom: 5px; padding-right: 40px; margin-bottom: 5px;">
+                        <span style="font-weight: 700; font-size: 1.1rem; text-transform: uppercase;">${rater}</span>
+                    </div>
+                    <p style="color: var(--text-muted); font-size: 0.85rem;">${raterRatings[0].raterPosition || 'Employee'}</p>
                 </div>
-                <p style="color: var(--text-muted); font-size: 0.85rem;">${raterRatings[0].raterPosition || 'Employee'}</p>
+                <button class="btn danger-btn delete-all-modal-btn" data-rater="${rater}"><i class='bx bx-trash'></i> Delete All Submissions</button>
             </div>
         `;
 
         app.modal.body.innerHTML = detailsHtml;
+        
+        // Add event listeners for modal buttons
+        app.modal.body.querySelectorAll('.delete-individual-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                deleteRating(e.currentTarget.getAttribute('data-id'));
+            });
+        });
+
+        const deleteAllBtn = app.modal.body.querySelector('.delete-all-modal-btn');
+        if (deleteAllBtn) {
+            deleteAllBtn.addEventListener('click', (e) => {
+                deleteRatingGroup(e.currentTarget.getAttribute('data-rater'));
+            });
+        }
+
         app.modal.el.classList.add('show');
     };
 
@@ -1120,7 +1664,7 @@ document.addEventListener('DOMContentLoaded', () => {
         app.modal.el.classList.remove('show');
     });
 
-    window.addEventListener('click', (e) => {
+    window.addEventListener('mousedown', (e) => {
         if (e.target === app.modal.el) {
             app.modal.el.classList.remove('show');
         }
@@ -1129,6 +1673,93 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         if (app.admin.addApplicantModal && e.target === app.admin.addApplicantModal) {
             app.admin.addApplicantModal.classList.remove('show');
+        }
+        if (app.admin.applicantHistoryModal && e.target === app.admin.applicantHistoryModal) {
+            app.admin.applicantHistoryModal.classList.remove('show');
+        }
+    });
+
+    window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            const openModals = Array.from(document.querySelectorAll('.modal.show'));
+            if (openModals.length === 0) return;
+
+            // Find the top-most modal (highest z-index, or later in DOM if equal)
+            let topModal = openModals[0];
+            let maxZ = parseInt(window.getComputedStyle(topModal).zIndex) || 0;
+
+            for (let i = 1; i < openModals.length; i++) {
+                let currentZ = parseInt(window.getComputedStyle(openModals[i]).zIndex) || 0;
+                if (currentZ >= maxZ) {
+                    topModal = openModals[i];
+                    maxZ = currentZ;
+                }
+            }
+
+            // Close only the top-most modal
+            if (topModal === app.confirmModal.el) {
+                app.confirmModal.cancelBtn.click();
+            } else {
+                topModal.classList.remove('show');
+            }
+        } else if (e.key === 'Tab') {
+            // Focus trap: keep focus within the system/active context
+            const focusableSelectors = 'button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])';
+            
+            // Determine active context (top modal or active view)
+            const openModals = Array.from(document.querySelectorAll('.modal.show'));
+            let context = document;
+            
+            if (openModals.length > 0) {
+                let topModal = openModals[0];
+                let maxZ = parseInt(window.getComputedStyle(topModal).zIndex) || 0;
+                for (let i = 1; i < openModals.length; i++) {
+                    let currentZ = parseInt(window.getComputedStyle(openModals[i]).zIndex) || 0;
+                    if (currentZ >= maxZ) {
+                        topModal = openModals[i];
+                        maxZ = currentZ;
+                    }
+                }
+                context = topModal;
+            } else {
+                const activeView = document.querySelector('.view.active');
+                if (activeView) context = activeView;
+            }
+
+            const visibleFocusable = Array.from(context.querySelectorAll(focusableSelectors))
+                .filter(el => !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length));
+
+            if (visibleFocusable.length === 0) {
+                e.preventDefault();
+                return;
+            }
+
+            const firstElement = visibleFocusable[0];
+            const lastElement = visibleFocusable[visibleFocusable.length - 1];
+
+            if (e.shiftKey) { // Shift + Tab
+                if (document.activeElement === firstElement || document.activeElement === document.body || !visibleFocusable.includes(document.activeElement)) {
+                    e.preventDefault();
+                    lastElement.focus();
+                }
+            } else { // Tab
+                if (document.activeElement === lastElement || document.activeElement === document.body || !visibleFocusable.includes(document.activeElement)) {
+                    e.preventDefault();
+                    firstElement.focus();
+                }
+            }
+        }
+    });
+
+    // Prevent buttons from retaining focus after being clicked with a mouse.
+    // This stops the "Enter" key from accidentally triggering the last clicked button.
+    document.addEventListener('click', (e) => {
+        // e.detail > 0 ensures this was a mouse click or touch, not a keyboard action.
+        if (e.detail > 0) {
+            const btn = e.target.closest('button');
+            if (btn) {
+                btn.blur();
+            }
         }
     });
 

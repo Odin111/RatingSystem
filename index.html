@@ -16,7 +16,7 @@
 <body>
     <div id="app">
         <!-- Login View -->
-        <div id="login-view" class="view active">
+        <div id="login-view" class="view">
             <div class="auth-container">
                 <div class="auth-card glass-panel">
                     <div class="auth-header">
@@ -112,102 +112,15 @@
                         <p>Potential & Psychosocial Attributes/Personality Traits - BEI</p>
                     </div>
                     <form id="rating-form">
-                        <div class="form-row">
-                            <div class="input-group">
-                                <label for="applicant-select">Select Applicant</label>
-                                <div class="input-wrapper">
-                                    <i class='bx bx-user' style="z-index: 1;"></i>
-                                    <select id="applicant-select" required style="padding-left: 40px; appearance: none;">
-                                        <option value="" disabled selected>Select an applicant to rate...</option>
-                                        <!-- Dynamically populated -->
-                                    </select>
-                                    <i class='bx bx-chevron-down' style="position: absolute; right: 15px; left: auto;"></i>
-                                </div>
-                            </div>
-                            <div class="input-group">
-                                <label for="position-applied">Position</label>
-                                <div class="input-wrapper">
-                                    <i class='bx bx-briefcase' style="z-index: 1;"></i>
-                                    <select id="position-applied" required style="padding-left: 40px; appearance: none;">
-                                        <option value="" disabled selected>Select an applicant first</option>
-                                    </select>
-                                    <i class='bx bx-chevron-down' style="position: absolute; right: 15px; left: auto;"></i>
-                                </div>
-                            </div>
+                        <div class="pagination-controls" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                            <button type="button" id="prev-page-btn" class="btn outline-btn" disabled><i class='bx bx-chevron-left'></i> Previous</button>
+                            <span id="page-indicator" style="font-weight: 600; color: var(--text-secondary);">Page 1</span>
+                            <button type="button" id="next-page-btn" class="btn outline-btn" disabled>Next <i class='bx bx-chevron-right'></i></button>
                         </div>
                         
-                        <div class="table-responsive">
-                            <table class="rating-table">
-                                <thead>
-                                    <tr>
-                                        <th>CRITERIA/ATTRIBUTES</th>
-                                        <th class="points-col">POINTS</th>
-                                        <th>RATING</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td>COMMUNICATION SKILLS</td>
-                                        <td class="points-col">3</td>
-                                        <td><input type="number" name="q1" min="0" max="3" required></td>
-                                    </tr>
-                                    <tr>
-                                        <td>LEADERSHIP SKILLS</td>
-                                        <td class="points-col">2</td>
-                                        <td><input type="number" name="q2" min="0" max="2" required></td>
-                                    </tr>
-                                    <tr>
-                                        <td>PLANNING/DECISION MAKING</td>
-                                        <td class="points-col">2</td>
-                                        <td><input type="number" name="q3" min="0" max="2" required></td>
-                                    </tr>
-                                    <tr>
-                                        <td>WORK-ORIENTED/DEDICATION & COMMITMENT</td>
-                                        <td class="points-col">1</td>
-                                        <td><input type="number" name="q4" min="0" max="1" required></td>
-                                    </tr>
-                                    <tr>
-                                        <td>QUALITY OF WORK</td>
-                                        <td class="points-col">1</td>
-                                        <td><input type="number" name="q5" min="0" max="1" required></td>
-                                    </tr>
-                                    <tr>
-                                        <td>CREATIVE, SIMPLE & EFFICIENT</td>
-                                        <td class="points-col">1</td>
-                                        <td><input type="number" name="q6" min="0" max="1" required></td>
-                                    </tr>
-                                    <tr>
-                                        <td>PERSONAL CONDUCT/BEHAVIOR</td>
-                                        <td class="points-col">3</td>
-                                        <td><input type="number" name="q7" min="0" max="3" required></td>
-                                    </tr>
-                                    <tr>
-                                        <td>SERVICE-ORIENTED/WORK ATTITUDE</td>
-                                        <td class="points-col">2</td>
-                                        <td><input type="number" name="q8" min="0" max="2" required></td>
-                                    </tr>
-                                    <tr>
-                                        <td>MORAL VALUES</td>
-                                        <td class="points-col">2</td>
-                                        <td><input type="number" name="q9" min="0" max="2" required></td>
-                                    </tr>
-                                    <tr>
-                                        <td>TEAMWORK</td>
-                                        <td class="points-col">2</td>
-                                        <td><input type="number" name="q10" min="0" max="2" required></td>
-                                    </tr>
-                                    <tr>
-                                        <td>MANNER & APPEARANCE</td>
-                                        <td class="points-col">1</td>
-                                        <td><input type="number" name="q11" min="0" max="1" required></td>
-                                    </tr>
-                                </tbody>
-                                <tfoot>
-                                    <tr>
-                                        <td colspan="2" class="total-label">Total Score</td>
-                                        <td id="live-total">0 / 20</td>
-                                    </tr>
-                                </tfoot>
+                        <div class="table-responsive" style="overflow-x: auto;">
+                            <table class="rating-table" id="dynamic-rating-table">
+                                <!-- Rendered dynamically by app.js -->
                             </table>
                         </div>
                             <div class="rater-section" style="margin-top: 0; margin-bottom: 0;">
@@ -215,7 +128,6 @@
                                 <h4 id="form-rater-name" class="rater-name-line">Employee Name</h4>
                                 <p class="rater-role">Employee</p>
                             </div>
-                        </div>
 
                         <hr style="border: none; border-top: 1px solid var(--glass-border); margin: 20px 0;">
 
@@ -240,7 +152,7 @@
             <main class="dashboard-content">
                 <!-- Admin Tabs -->
                 <div class="admin-tabs" style="display: flex; gap: 10px; margin-bottom: 20px;">
-                    <button class="btn primary-btn admin-tab-btn" data-tab="overview"><i class='bx bx-grid-alt'></i> Overview & Applicants</button>
+                    <button class="btn primary-btn admin-tab-btn" data-tab="overview"><i class='bx bx-grid-alt'></i> Applicant Forms</button>
                     <button class="btn outline-btn admin-tab-btn" data-tab="submissions"><i class='bx bx-list-check'></i> Recent Submissions</button>
                 </div>
 
@@ -249,13 +161,16 @@
                 <div class="manage-applicants-section glass-panel" style="padding: 20px; margin-bottom: 30px;">
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
                         <h2 style="display: flex; align-items: center; gap: 8px;"><i class='bx bx-user-plus' style="color: var(--secondary-color);"></i> Active Applicant Forms</h2>
-                        <button id="open-add-applicant-btn" class="btn primary-btn"><i class='bx bx-plus'></i> Add Applicant</button>
+                        <div style="display: flex; gap: 10px;">
+                            <button id="applicant-history-btn" class="btn outline-btn"><i class='bx bx-history'></i> History</button>
+                            <button id="open-add-applicant-btn" class="btn primary-btn"><i class='bx bx-plus'></i> Add Applicant</button>
+                        </div>
                     </div>
                     <div class="table-responsive" style="margin-bottom: 0;">
                         <table class="data-table">
                             <thead>
                                 <tr>
-                                    <th>Applicant Name</th>
+                                    <th>Applicant Name (Last Name, First Name, Middle Initial)</th>
                                     <th>Position</th>
                                     <th>Date Added</th>
                                     <th>Action</th>
@@ -321,7 +236,7 @@
 
         <!-- History Modal (Admin) -->
         <div id="history-modal" class="modal">
-            <div class="modal-content glass-panel" style="max-width: 800px;">
+            <div class="modal-content glass-panel wide-modal">
                 <span class="close-modal">&times;</span>
                 <div class="admin-header-actions" style="margin-bottom: 20px; margin-top: 10px; padding-right: 20px;">
                     <h2 style="display: flex; align-items: center; gap: 8px;"><i class='bx bx-history'></i> Deletion History</h2>
@@ -336,7 +251,7 @@
                             <tr>
                                 <th>Date</th>
                                 <th>Rater</th>
-                                <th>Applicant</th>
+                                <th>Applicant Name (Last Name, First Name, Middle Initial)</th>
                                 <th>Score</th>
                                 <th>Action</th>
                             </tr>
@@ -353,6 +268,39 @@
             </div>
         </div>
 
+        <!-- Applicant History Modal (Admin) -->
+        <div id="applicant-history-modal" class="modal">
+            <div class="modal-content glass-panel wide-modal">
+                <span class="close-modal">&times;</span>
+                <div class="admin-header-actions" style="margin-bottom: 20px; margin-top: 10px; padding-right: 20px;">
+                    <h2 style="display: flex; align-items: center; gap: 8px;"><i class='bx bx-history'></i> Applicant Deletion History</h2>
+                    <div style="display: flex; gap: 10px;">
+                        <button id="restore-all-applicants-btn" class="btn outline-btn"><i class='bx bx-undo'></i> Restore All</button>
+                        <button id="delete-all-applicants-history-btn" class="btn danger-btn"><i class='bx bx-trash'></i> Delete All</button>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Applicant Name (Last Name, First Name, Middle Initial)</th>
+                                <th>Position</th>
+                                <th>Date Deleted</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="applicant-history-tbody">
+                            <!-- Dynamically populated -->
+                        </tbody>
+                    </table>
+                </div>
+                <div id="no-applicant-history-msg" class="empty-state hidden">
+                    <i class='bx bx-folder-open'></i>
+                    <p>No deleted applicants found.</p>
+                </div>
+            </div>
+        </div>
+
         <!-- Add Applicant Modal (Admin) -->
         <div id="add-applicant-modal" class="modal">
             <div class="modal-content glass-panel" style="max-width: 400px;">
@@ -360,10 +308,10 @@
                 <h2>Add Rating Form</h2>
                 <form id="add-applicant-form" style="margin-top: 20px;">
                     <div class="input-group">
-                        <label for="new-applicant-name">Applicant Name</label>
+                        <label for="new-applicant-name">Applicant Name (Last Name, First Name, Middle Initial)</label>
                         <div class="input-wrapper">
                             <i class='bx bx-user' style="z-index: 1;"></i>
-                            <input type="text" id="new-applicant-name" required placeholder="Full Name" style="padding-left: 40px;">
+                            <input type="text" id="new-applicant-name" required placeholder="Last Name, First Name, M.I." style="padding-left: 40px;">
                         </div>
                     </div>
                     <div class="input-group">
@@ -372,6 +320,19 @@
                             <i class='bx bx-briefcase' style="z-index: 1;"></i>
                             <input type="text" id="new-applicant-position" required placeholder="Position Applied" style="padding-left: 40px;">
                         </div>
+                    </div>
+                    <div class="input-group">
+                        <label>Credentials (Optional)</label>
+                        <div style="display: flex; gap: 8px;">
+                            <div class="input-wrapper" style="flex: 1;">
+                                <i class='bx bx-certification' style="z-index: 1;"></i>
+                                <input type="text" id="new-credential-input" placeholder="Enter credential..." style="padding-left: 40px;">
+                            </div>
+                            <button type="button" id="add-credential-btn" class="btn outline-btn" style="padding: 0 15px;"><i class='bx bx-plus'></i></button>
+                        </div>
+                        <ul id="credentials-list" style="list-style: none; padding: 0; margin-top: 10px; display: flex; flex-direction: column; gap: 5px;">
+                            <!-- Dynamically populated -->
+                        </ul>
                     </div>
                     <button type="submit" class="btn primary-btn" style="width: 100%; margin-top: 10px;">Create Form</button>
                 </form>
@@ -448,6 +409,12 @@
 
     <!-- SheetJS (xlsx) for Excel Export -->
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+
+    <!-- Theme Toggle -->
+    <button id="theme-toggle" class="theme-toggle-fixed" title="Toggle Dark/Light Mode">
+        <i class='bx bx-moon'></i>
+    </button>
+
     <script src="app.js"></script>
 </body>
 </html>

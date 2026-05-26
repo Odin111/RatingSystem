@@ -1,10 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rating System</title>
     <meta name="description" content="A rating system for applicant evaluation.">
+    <link rel="icon" type="image/png" href="logo.png">
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -12,16 +14,32 @@
     <!-- Boxicons for modern icons -->
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
     <link rel="stylesheet" href="styles.css">
+    <script>
+        (function () {
+            const savedTheme = localStorage.getItem('ratingSystem_theme');
+            if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark-mode');
+            }
+        })();
+    </script>
 </head>
+
 <body>
+    <div class="bg-decorative">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+    </div>
     <div id="app">
         <!-- Login View -->
         <div id="login-view" class="view">
             <div class="auth-container">
                 <div class="auth-card glass-panel">
                     <div class="auth-header">
-                        <h2><i class='bx bx-log-in-circle'></i> Sign In</h2>
-                        <p>Welcome back to Rating System</p>
+                        <div class="auth-logo">
+                            <img src="logo.png" alt="DAR Logo" class="auth-logo-img">
+                        </div>
+                        <h2>Welcome Back</h2>
+                        <p>Sign in to DAR Rating System</p>
                     </div>
                     <form id="login-form">
                         <div class="input-group">
@@ -36,61 +54,13 @@
                             <div class="input-wrapper">
                                 <i class='bx bx-lock-alt'></i>
                                 <input type="password" id="login-password" required placeholder="Enter password">
-                                <button type="button" class="toggle-password" tabindex="-1"><i class='bx bx-show'></i></button>
+                                <button type="button" class="toggle-password" tabindex="-1"><i
+                                        class='bx bx-show'></i></button>
                             </div>
                         </div>
-                        <button type="submit" class="btn primary-btn" style="width: 100%; margin-top: 10px;">Login</button>
+                        <button type="submit" class="btn primary-btn"
+                            style="width: 100%; margin-top: 10px;">Login</button>
                     </form>
-                    <div class="auth-footer">
-                        <p>Don't have an account? <button id="go-to-register" class="btn outline-btn" style="padding: 5px 10px; margin-left: 10px;">Register</button></p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Register View -->
-        <div id="register-view" class="view">
-            <div class="auth-container">
-                <div class="auth-card glass-panel" style="border-top: 4px solid var(--secondary-color);">
-                    <div class="auth-header">
-                        <h2><i class='bx bx-user-plus'></i> Create Account</h2>
-                        <p>Register as an Employee (Rater)</p>
-                    </div>
-                    <form id="register-form">
-                        <div class="input-group">
-                            <label for="register-fullname">Full Name</label>
-                            <div class="input-wrapper">
-                                <i class='bx bx-id-card'></i>
-                                <input type="text" id="register-fullname" required placeholder="Enter full name">
-                            </div>
-                        </div>
-                        <div class="input-group">
-                            <label for="register-position">Position</label>
-                            <div class="input-wrapper">
-                                <i class='bx bx-briefcase'></i>
-                                <input type="text" id="register-position" required placeholder="Enter your position (e.g., HRMO II)">
-                            </div>
-                        </div>
-                        <div class="input-group">
-                            <label for="register-username">Username</label>
-                            <div class="input-wrapper">
-                                <i class='bx bx-user'></i>
-                                <input type="text" id="register-username" required placeholder="Choose a username">
-                            </div>
-                        </div>
-                        <div class="input-group">
-                            <label for="register-password">Password</label>
-                            <div class="input-wrapper">
-                                <i class='bx bx-lock-alt'></i>
-                                <input type="password" id="register-password" required placeholder="Choose a password">
-                                <button type="button" class="toggle-password" tabindex="-1"><i class='bx bx-show'></i></button>
-                            </div>
-                        </div>
-                        <button type="submit" class="btn primary-btn" style="width: 100%; margin-top: 10px;">Register</button>
-                    </form>
-                    <div class="auth-footer">
-                        <p>Already have an account? <button id="go-to-login" class="btn outline-btn" style="padding: 5px 10px; margin-left: 10px;">Login</button></p>
-                    </div>
                 </div>
             </div>
         </div>
@@ -98,8 +68,18 @@
         <!-- Employee Dashboard (Rating Form) -->
         <div id="employee-view" class="view">
             <nav class="navbar glass-panel">
-                <div class="nav-brand"><i class='bx bx-star'></i> Rating System</div>
+                <div class="nav-brand"><img src="logo.png" alt="DAR Logo" class="nav-logo"> Rating System</div>
                 <div class="nav-user">
+                    <div id="password-warning" class="hidden"
+                        style="position: relative; display: flex; align-items: center; gap: 5px; color: var(--secondary-color); cursor: help;">
+                        <i class='bx bxs-error-circle' style="font-size: 1.5rem;"></i>
+                        <span style="font-size: 0.85rem; font-weight: 600;">Please change your password</span>
+                        <div class="password-warning-tooltip">
+                            <strong>Secure Your Account</strong>
+                            <p>Your account was made with a default password. Please change your password to make it
+                                secure.</p>
+                        </div>
+                    </div>
                     <span id="employee-welcome">Welcome, User</span>
                     <button id="employee-settings" class="btn outline-btn"><i class='bx bx-cog'></i></button>
                     <button id="employee-logout" class="btn outline-btn"><i class='bx bx-log-out'></i> Logout</button>
@@ -108,31 +88,43 @@
             <main class="dashboard-content">
                 <div class="rating-card glass-panel">
                     <div class="rating-header">
-                        <h2>Applicant Rating Form</h2>
+                        <h2 style="display: flex; align-items: center; gap: 8px;">Applicant Rating Form <span
+                                id="employee-applicant-count"
+                                style="background: rgba(217, 119, 6, 0.1); color: var(--secondary-color); font-size: 0.9rem; padding: 2px 10px; border-radius: 12px; margin-left: 5px;">0</span>
+                        </h2>
                         <p>Potential & Psychosocial Attributes/Personality Traits - BEI</p>
                     </div>
                     <form id="rating-form">
-                        <div class="pagination-controls" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                            <button type="button" id="prev-page-btn" class="btn outline-btn" disabled><i class='bx bx-chevron-left'></i> Previous</button>
-                            <span id="page-indicator" style="font-weight: 600; color: var(--text-secondary);">Page 1</span>
-                            <button type="button" id="next-page-btn" class="btn outline-btn" disabled>Next <i class='bx bx-chevron-right'></i></button>
-                        </div>
-                        
-                        <div class="table-responsive" style="overflow-x: auto;">
+
+
+                        <div class="table-responsive freeze-pane" style="overflow-x: auto;">
                             <table class="rating-table" id="dynamic-rating-table">
                                 <!-- Rendered dynamically by app.js -->
                             </table>
                         </div>
-                            <div class="rater-section" style="margin-top: 0; margin-bottom: 0;">
-                                <p>RATER:</p>
-                                <h4 id="form-rater-name" class="rater-name-line">Employee Name</h4>
-                                <p class="rater-role">Employee</p>
-                            </div>
+
+                        <div id="employee-pagination" class="pagination-controls"
+                            style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px; margin-bottom: 25px;">
+                            <button type="button" id="prev-page-btn" class="btn outline-btn" disabled><i
+                                    class='bx bx-chevron-left'></i> Previous</button>
+                            <span id="page-indicator" style="font-weight: 500; color: var(--text-secondary);">Page 1 of
+                                1</span>
+                            <button type="button" id="next-page-btn" class="btn outline-btn" disabled>Next <i
+                                    class='bx bx-chevron-right'></i></button>
+                        </div>
+                        <div class="rater-section" style="margin-top: 0; margin-bottom: 0;">
+                            <p>RATER:</p>
+                            <h4 id="form-rater-name" class="rater-name-line">Employee Name</h4>
+                            <p class="rater-role">Employee</p>
+                        </div>
 
                         <hr style="border: none; border-top: 1px solid var(--glass-border); margin: 20px 0;">
 
-                        <div class="form-actions-bar" style="justify-content: flex-end;">
-                            <button type="button" id="pre-submit-btn" class="btn primary-btn"><i class='bx bx-send'></i> Submit Rating</button>
+                        <div class="form-actions-bar" style="justify-content: flex-end; gap: 10px;">
+                            <button type="button" id="clear-all-ratings-btn" class="btn outline-btn"><i
+                                    class='bx bx-eraser'></i> Clear All Ratings</button>
+                            <button type="button" id="pre-submit-btn" class="btn primary-btn"><i class='bx bx-send'></i>
+                                Submit Rating</button>
                         </div>
                     </form>
                 </div>
@@ -142,7 +134,7 @@
         <!-- Admin Dashboard -->
         <div id="admin-view" class="view">
             <nav class="navbar glass-panel">
-                <div class="nav-brand"><i class='bx bx-shield-quarter'></i> Admin Dashboard</div>
+                <div class="nav-brand"><img src="logo.png" alt="DAR Logo" class="nav-logo"> Admin Dashboard</div>
                 <div class="nav-user">
                     <span id="admin-welcome">Welcome, Admin</span>
                     <button id="admin-settings" class="btn outline-btn"><i class='bx bx-cog'></i></button>
@@ -151,119 +143,218 @@
             </nav>
             <main class="dashboard-content">
                 <!-- Admin Tabs -->
-                <div class="admin-tabs" style="display: flex; gap: 10px; margin-bottom: 20px;">
-                    <button class="btn primary-btn admin-tab-btn" data-tab="overview"><i class='bx bx-grid-alt'></i> Applicant Forms</button>
-                    <button class="btn outline-btn admin-tab-btn" data-tab="submissions"><i class='bx bx-list-check'></i> Recent Submissions</button>
+                <div class="admin-tabs">
+                    <button class="btn primary-btn admin-tab-btn" data-tab="overview"><i class='bx bx-grid-alt'></i>
+                        Applicant Forms</button>
+                    <button class="btn outline-btn admin-tab-btn" data-tab="submissions"><i
+                            class='bx bx-list-check'></i> Recent Submissions</button>
+                    <button class="btn outline-btn admin-tab-btn" data-tab="accounts"><i class='bx bx-group'></i>
+                        Employee Accounts</button>
                 </div>
 
                 <div id="admin-tab-overview" class="admin-tab-content active">
-                <!-- Manage Applicants Section -->
-                <div class="manage-applicants-section glass-panel" style="padding: 20px; margin-bottom: 30px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                        <h2 style="display: flex; align-items: center; gap: 8px;"><i class='bx bx-user-plus' style="color: var(--secondary-color);"></i> Active Applicant Forms</h2>
-                        <div style="display: flex; gap: 10px;">
-                            <button id="applicant-history-btn" class="btn outline-btn"><i class='bx bx-history'></i> History</button>
-                            <button id="open-add-applicant-btn" class="btn primary-btn"><i class='bx bx-plus'></i> Add Applicant</button>
+                    <!-- Batches Folder View (Main View) -->
+                    <div id="batches-folder-view" class="manage-applicants-section glass-panel animate-fade" style="padding: 20px; margin-bottom: 30px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 10px;">
+                            <h2 style="display: flex; align-items: center; gap: 8px;">
+                                <i class='bx bx-folder' style="color: var(--secondary-color);"></i> Active Applicant Forms 
+                                <span id="active-applicant-count" style="background: rgba(217, 119, 6, 0.1); color: var(--secondary-color); font-size: 0.9rem; padding: 2px 10px; border-radius: 12px; margin-left: 5px;">0</span>
+                            </h2>
+                            <div style="display: flex; gap: 10px; align-items: center; justify-content: flex-end; margin-left: auto;">
+                                <button id="applicant-history-btn" class="btn history-btn"><i class='bx bx-history'></i> History</button>
+                                <button id="open-add-batch-btn" class="btn outline-btn"><i class='bx bx-folder-plus'></i> Add Batch</button>
+                            </div>
+                        </div>
+                        <div id="batches-grid" class="batches-grid">
+                            <!-- Dynamically populated grid of folders -->
                         </div>
                     </div>
-                    <div class="table-responsive" style="margin-bottom: 0;">
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th>Applicant Name (Last Name, First Name, Middle Initial)</th>
-                                    <th>Position</th>
-                                    <th>Date Added</th>
-                                    <th>Action</th>
-                                </tr>
-                            </thead>
-                            <tbody id="admin-applicants-tbody">
-                                <!-- Dynamically populated -->
-                            </tbody>
-                        </table>
-                    </div>
-                    <div id="no-applicants-msg" class="empty-state hidden" style="padding: 30px 20px;">
-                        <i class='bx bx-folder-open'></i>
-                        <p>No active applicants found. Add one to get started.</p>
-                    </div>
-                </div>
 
-                </div>
-
-                <div id="admin-tab-submissions" class="admin-tab-content" style="display: none;">
-                    <div class="admin-header-actions">
-                        <h2>Recent Submissions</h2>
-                        <div style="display: flex; gap: 10px;">
-                            <button id="history-btn" class="btn outline-btn"><i class='bx bx-history'></i> History</button>
-                            <button id="clear-data-btn" class="btn danger-btn"><i class='bx bx-trash'></i> Clear All Data</button>
+                    <!-- Batch Contents View (Sub-View, shown when a folder is clicked) -->
+                    <div id="batch-contents-view" class="manage-applicants-section glass-panel hidden animate-fade" style="padding: 20px; margin-bottom: 30px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
+                            <div style="display: flex; align-items: center; gap: 15px;">
+                                <button id="back-to-batches-btn" class="btn outline-btn" style="padding: 8px 15px;"><i class='bx bx-arrow-back'></i> Back</button>
+                                <h2 style="display: flex; align-items: center; gap: 8px;" id="batch-contents-title">
+                                    <i class='bx bx-folder-open' style="color: var(--secondary-color);"></i>
+                                    <span id="batch-name-heading">Batch Name</span>
+                                    <span id="batch-applicant-count" style="background: rgba(217, 119, 6, 0.1); color: var(--secondary-color); font-size: 0.9rem; padding: 2px 10px; border-radius: 12px; margin-left: 5px;">0</span>
+                                </h2>
+                            </div>
+                            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: flex-end; margin-left: auto;">
+                                <div class="input-wrapper" style="width: 250px; margin-bottom: 0;">
+                                    <i class='bx bx-search'></i>
+                                    <input type="text" id="admin-search-applicant" placeholder="Search Applicant Name...">
+                                    <i class='bx bx-x clear-search' id="clear-applicant-search"></i>
+                                </div>
+                                <button id="toggle-select-applicants-btn" class="btn outline-btn"><i class='bx bx-checkbox-square'></i> Select</button>
+                                <button id="open-add-applicant-btn" class="btn primary-btn"><i class='bx bx-plus'></i> Add Applicant</button>
+                                <button id="delete-all-applicants-btn" class="btn danger-btn"><i class='bx bx-trash'></i> Delete All Forms</button>
+                                <button id="delete-selected-applicants-btn" class="btn danger-btn hidden" disabled><i class='bx bx-trash'></i> Delete Selected</button>
+                                <button id="move-selected-applicants-btn" class="btn primary-btn hidden" disabled><i class='bx bx-folder'></i> Move Selected</button>
+                            </div>
                         </div>
-                    </div>
-                    <div class="ratings-container glass-panel">
-                        <div class="table-responsive">
+                        <div class="table-responsive" style="margin-bottom: 0;">
                             <table class="data-table">
                                 <thead>
                                     <tr>
-                                        <th>Date (Latest)</th>
-                                        <th>Rater</th>
+                                        <th class="select-col hidden" style="width: 45px; text-align: center;"><input type="checkbox" id="select-all-applicants-checkbox" style="width: 18px; height: 18px; cursor: pointer;"></th>
+                                        <th>Applicant Name (Last Name, First Name, Middle Initial)</th>
+                                        <th>Division</th>
                                         <th>Position</th>
-                                        <th>Applicants Rated</th>
+                                        <th>Date Added</th>
                                         <th>Action</th>
                                     </tr>
                                 </thead>
-                                <tbody id="admin-ratings-tbody">
+                                <tbody id="admin-applicants-tbody">
                                     <!-- Dynamically populated -->
                                 </tbody>
                             </table>
                         </div>
+                        <div id="no-applicants-msg" class="empty-state hidden" style="padding: 30px 20px;">
+                            <i class='bx bx-folder-open'></i>
+                            <p>No active applicants found. Add one to get started.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="admin-tab-submissions" class="admin-tab-content" style="display: none;">
+                    <div class="ratings-container glass-panel" style="padding: 20px;">
+                        <div class="admin-header-actions" style="margin-bottom: 15px;">
+                            <h2 style="display: flex; align-items: center; gap: 8px;"><i class='bx bx-list-check' style="color: var(--secondary-color);"></i> Recent Submissions</h2>
+                            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: flex-end; margin-left: auto;">
+                                <div class="input-wrapper" style="width: 250px; margin-bottom: 0;">
+                                    <i class='bx bx-search'></i>
+                                    <input type="text" id="admin-search-rater" placeholder="Search Rater...">
+                                    <i class='bx bx-x clear-search' id="clear-rater-search"></i>
+                                </div>
+                                <button id="export-all-btn" class="btn export-btn"><i class='bx bx-export'></i> Export
+                                    All</button>
+                                <button id="history-btn" class="btn history-btn"><i class='bx bx-history'></i>
+                                    History</button>
+                                <button id="delete-all-submissions-btn" class="btn danger-btn"><i
+                                        class='bx bx-trash'></i> Delete All Ratings</button>
+                            </div>
+                        </div>
+                        
+                        <!-- Division Navigation Tabs -->
+                        <div id="division-tabs-nav" class="division-tabs-nav" style="margin-bottom: 20px;"></div>
+
+                        <div id="admin-submissions-content">
+                            <!-- Dynamic tables grouped by position inside division tabs -->
+                        </div>
+
                         <div id="no-ratings-msg" class="empty-state">
                             <i class='bx bx-folder-open'></i>
                             <p>No ratings submitted yet.</p>
                         </div>
                     </div>
                 </div>
-            </main>
-        </div>
-        
-        <!-- View Details Modal (Admin) -->
-        <div id="details-modal" class="modal">
-            <div class="modal-content glass-panel wide-modal">
-                <span class="close-modal">&times;</span>
-                <h2>Rating Form Details</h2>
-                <div id="modal-details-body">
-                    <!-- Populated dynamically -->
-                </div>
-            </div>
-        </div>
 
-        <!-- History Modal (Admin) -->
-        <div id="history-modal" class="modal">
-            <div class="modal-content glass-panel wide-modal">
-                <span class="close-modal">&times;</span>
-                <div class="admin-header-actions" style="margin-bottom: 20px; margin-top: 10px; padding-right: 20px;">
-                    <h2 style="display: flex; align-items: center; gap: 8px;"><i class='bx bx-history'></i> Deletion History</h2>
-                    <div style="display: flex; gap: 10px;">
-                        <button id="restore-all-btn" class="btn outline-btn"><i class='bx bx-undo'></i> Restore All</button>
-                        <button id="delete-all-history-btn" class="btn danger-btn"><i class='bx bx-trash'></i> Delete All</button>
+                <div id="admin-tab-accounts" class="admin-tab-content" style="display: none;">
+                    <div class="manage-accounts-section glass-panel" style="padding: 20px; margin-bottom: 30px;">
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
+                            <h2 style="display: flex; align-items: center; gap: 8px;"><i class='bx bx-group'
+                                    style="color: var(--secondary-color);"></i> Employee Accounts</h2>
+                            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: flex-end; margin-left: auto;">
+                                <div class="input-wrapper" style="width: 250px; margin-bottom: 0;">
+                                    <i class='bx bx-search'></i>
+                                    <input type="text" id="admin-search-account" placeholder="Search Employee...">
+                                    <i class='bx bx-x clear-search' id="clear-account-search"></i>
+                                </div>
+                                <button id="open-add-account-btn" class="btn primary-btn"><i
+                                        class='bx bx-user-plus'></i> Add Account</button>
+                            </div>
+                        </div>
+                        <!-- Division Navigation Tabs -->
+                        <div id="accounts-division-tabs-nav" class="division-tabs-nav" style="margin-bottom: 20px;"></div>
+
+                        <div class="table-responsive" style="margin-bottom: 0;">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 22%; text-align: center;">Full Name</th>
+                                        <th style="width: 14%; text-align: center;">Division</th>
+                                        <th style="width: 17%; text-align: center;">Position</th>
+                                        <th style="width: 13%; text-align: center;">Username</th>
+                                        <th style="width: 34%; text-align: center;">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="admin-accounts-tbody">
+                                    <!-- Dynamically populated -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="no-accounts-msg" class="empty-state hidden" style="padding: 30px 20px;">
+                            <i class='bx bx-folder-open'></i>
+                            <p>No employee accounts found.</p>
+                        </div>
                     </div>
                 </div>
-                <div class="table-responsive">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Date</th>
-                                <th>Rater</th>
-                                <th>Applicant Name (Last Name, First Name, Middle Initial)</th>
-                                <th>Score</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="history-tbody">
-                            <!-- Dynamically populated -->
-                        </tbody>
-                    </table>
+
+                <div id="admin-tab-history" class="admin-tab-content" style="display: none;">
+                    <div class="ratings-container glass-panel" style="padding: 20px;">
+                        <div class="admin-header-actions">
+                            <h2 style="display: flex; align-items: center; gap: 8px;"><i class='bx bx-history'></i>
+                                Deletion History</h2>
+                            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: flex-end; margin-left: auto;">
+                                <button id="back-to-submissions-from-history" class="btn outline-btn"><i
+                                        class='bx bx-arrow-back'></i> Back to Submissions</button>
+                                <button id="restore-all-btn" class="btn outline-btn"><i class='bx bx-undo'></i> Restore
+                                    All</button>
+                                <button id="delete-all-history-btn" class="btn danger-btn"><i class='bx bx-trash'></i>
+                                    Delete All</button>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>DATE DELETED</th>
+                                        <th>RATER</th>
+                                        <th>POSITION</th>
+                                        <th>APPLICANTS RATED</th>
+                                        <th>ACTION</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="history-tbody">
+                                    <!-- Dynamically populated -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div id="no-history-msg" class="empty-state hidden">
+                            <i class='bx bx-folder-open'></i>
+                            <p>No deleted ratings found.</p>
+                        </div>
+                    </div>
                 </div>
-                <div id="no-history-msg" class="empty-state hidden">
-                    <i class='bx bx-folder-open'></i>
-                    <p>No deleted ratings found.</p>
+
+                <div id="admin-tab-details" class="admin-tab-content" style="display: none;">
+                    <div class="admin-header-actions" style="margin-bottom: 20px;">
+                        <h2 style="display: flex; align-items: center; gap: 8px;"><i class='bx bx-detail'></i> Rating
+                            Form Details</h2>
+                        <button id="back-to-submissions-btn" class="btn outline-btn" style="margin-left: auto;"><i class='bx bx-arrow-back'></i>
+                            Back to Submissions</button>
+                    </div>
+                    <div id="admin-tab-details-body" class="glass-panel" style="padding: 20px;">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <!-- Removed View Details Modal, now an admin tab -->
+        <!-- Details Modal (Admin) -->
+        <div id="details-modal" class="modal">
+            <div class="modal-content glass-panel wide-modal">
+                <span class="close-modal" id="close-details-modal">&times;</span>
+                <div class="admin-header-actions" style="margin-bottom: 20px; margin-top: 10px; padding-right: 20px;">
+                    <h2 style="display: flex; align-items: center; gap: 8px;"><i class='bx bx-detail'></i> Rating Form
+                        Details</h2>
+                </div>
+                <div id="modal-details-body" style="padding: 10px;">
+                    <!-- Populated dynamically -->
                 </div>
             </div>
         </div>
@@ -273,26 +364,17 @@
             <div class="modal-content glass-panel wide-modal">
                 <span class="close-modal">&times;</span>
                 <div class="admin-header-actions" style="margin-bottom: 20px; margin-top: 10px; padding-right: 20px;">
-                    <h2 style="display: flex; align-items: center; gap: 8px;"><i class='bx bx-history'></i> Applicant Deletion History</h2>
-                    <div style="display: flex; gap: 10px;">
-                        <button id="restore-all-applicants-btn" class="btn outline-btn"><i class='bx bx-undo'></i> Restore All</button>
-                        <button id="delete-all-applicants-history-btn" class="btn danger-btn"><i class='bx bx-trash'></i> Delete All</button>
+                    <h2 style="display: flex; align-items: center; gap: 8px;"><i class='bx bx-history'></i> Applicant
+                        Deletion History</h2>
+                    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: flex-end; margin-left: auto;">
+                        <button id="restore-all-applicants-btn" class="btn outline-btn"><i class='bx bx-undo'></i>
+                            Restore All</button>
+                        <button id="delete-all-applicants-history-btn" class="btn danger-btn"><i
+                                class='bx bx-trash'></i> Delete All</button>
                     </div>
                 </div>
-                <div class="table-responsive">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Applicant Name (Last Name, First Name, Middle Initial)</th>
-                                <th>Position</th>
-                                <th>Date Deleted</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody id="applicant-history-tbody">
-                            <!-- Dynamically populated -->
-                        </tbody>
-                    </table>
+                <div id="applicant-history-container" style="display: flex; flex-direction: column; gap: 20px; max-height: 50vh; overflow-y: auto; padding-right: 5px;">
+                    <!-- Grouped folders will be rendered dynamically here -->
                 </div>
                 <div id="no-applicant-history-msg" class="empty-state hidden">
                     <i class='bx bx-folder-open'></i>
@@ -310,43 +392,255 @@
                     <div class="input-group">
                         <label for="new-applicant-name">Applicant Name (Last Name, First Name, Middle Initial)</label>
                         <div class="input-wrapper">
-                            <i class='bx bx-user' style="z-index: 1;"></i>
-                            <input type="text" id="new-applicant-name" required placeholder="Last Name, First Name, M.I." style="padding-left: 40px;">
+                            <i class='bx bx-user'></i>
+                            <input type="text" id="new-applicant-name" required
+                                placeholder="Last Name, First Name, M.I." style="padding-left: 40px;">
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label for="new-applicant-division">Division</label>
+                        <div class="input-wrapper">
+                            <i class='bx bx-git-branch'></i>
+                            <select id="new-applicant-division" required>
+                                <option value="" disabled selected>Select Division</option>
+                                <option value="Unassigned">Unassigned</option>
+                                <option value="LTID">Land Tenure Improvement Division (LTID)</option>
+                                <option value="PBDD">Program Beneficiaries Development Division (PBDD)</option>
+                                <option value="STOD">Support To Operations Division (STOD)</option>
+                                <option value="LD">Legal Division (LD)</option>
+                                <option value="PARAD">Provincial Agrarian Reform Adjudicator (PARAD)</option>
+                                <option value="PARPO I">Office of the PARPO I (PARPO I)</option>
+                                <option value="PARPO II">Office of the PARPO II (PARPO II)</option>
+                            </select>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px; margin-top: 8px; margin-left: 2px;">
+                            <input type="checkbox" id="sync-division-checkbox" style="margin: 0; cursor: pointer; flex-shrink: 0;">
+                            <label for="sync-division-checkbox" style="margin: 0; cursor: pointer; user-select: none; -webkit-user-select: none;">Add to applicant's other rating forms</label>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label for="new-applicant-batch">Batch</label>
+                        <div class="input-wrapper">
+                            <i class='bx bx-layer'></i>
+                            <select id="new-applicant-batch" required>
+                                <option value="">No Batch</option>
+                            </select>
                         </div>
                     </div>
                     <div class="input-group">
                         <label for="new-applicant-position">Position</label>
                         <div class="input-wrapper">
-                            <i class='bx bx-briefcase' style="z-index: 1;"></i>
-                            <input type="text" id="new-applicant-position" required placeholder="Position Applied" style="padding-left: 40px;">
+                            <i class='bx bx-briefcase'></i>
+                            <input type="text" id="new-applicant-position" required placeholder="Position Applied"
+                                style="padding-left: 40px;">
                         </div>
                     </div>
                     <div class="input-group">
                         <label>Credentials (Optional)</label>
                         <div style="display: flex; gap: 8px;">
                             <div class="input-wrapper" style="flex: 1;">
-                                <i class='bx bx-certification' style="z-index: 1;"></i>
-                                <input type="text" id="new-credential-input" placeholder="Enter credential..." style="padding-left: 40px;">
+                                <i class='bx bx-certification'></i>
+                                <input type="text" id="new-credential-input" placeholder="Enter credential..."
+                                    style="padding-left: 40px;">
                             </div>
-                            <button type="button" id="add-credential-btn" class="btn outline-btn" style="padding: 0 15px;"><i class='bx bx-plus'></i></button>
+                            <button type="button" id="add-credential-btn" class="btn outline-btn"
+                                style="padding: 0 15px;"><i class='bx bx-plus'></i></button>
                         </div>
-                        <ul id="credentials-list" style="list-style: none; padding: 0; margin-top: 10px; display: flex; flex-direction: column; gap: 5px;">
+                        <ul id="credentials-list"
+                            style="list-style: none; padding: 0; margin-top: 10px; display: flex; flex-direction: column; gap: 5px;">
                             <!-- Dynamically populated -->
                         </ul>
                     </div>
-                    <button type="submit" class="btn primary-btn" style="width: 100%; margin-top: 10px;">Create Form</button>
+                    <button type="submit" class="btn primary-btn" style="width: 100%; margin-top: 10px;">Create
+                        Form</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Add Batch Modal (Admin) -->
+        <div id="add-batch-modal" class="modal">
+            <div class="modal-content glass-panel" style="max-width: 400px;">
+                <span class="close-modal">&times;</span>
+                <h2>Manage Batches</h2>
+                <form id="add-batch-form" style="margin-top: 20px;">
+                    <div class="input-group">
+                        <label for="new-batch-name">New Batch Name</label>
+                        <div class="input-wrapper">
+                            <i class='bx bx-folder'></i>
+                            <input type="text" id="new-batch-name" required placeholder="Enter batch name" style="padding-left: 40px;">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn primary-btn" style="width: 100%; margin-top: 10px;">Create Batch</button>
+                </form>
+                <div class="existing-batches-section" style="margin-top: 25px;">
+                    <h3 style="font-size: 1.1rem; margin-bottom: 10px; color: var(--text-primary);">Current Batches</h3>
+                    <div id="batches-list-container" style="max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding-right: 5px;">
+                        <!-- Batches with delete buttons will be rendered dynamically -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Rename Batch Modal (Admin) -->
+        <div id="rename-batch-modal" class="modal">
+            <div class="modal-content glass-panel" style="max-width: 420px;">
+                <span class="close-modal" id="rename-batch-modal-close">&times;</span>
+                <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 20px;">
+                    <div style="background: rgba(217, 119, 6, 0.12); border-radius: 12px; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                        <i class='bx bx-edit-alt' style="font-size: 1.6rem; color: var(--secondary-color);"></i>
+                    </div>
+                    <div>
+                        <h2 style="margin: 0; font-size: 1.25rem;">Rename Batch Folder</h2>
+                        <p id="rename-batch-current-name" style="margin: 4px 0 0; font-size: 0.875rem; color: var(--text-muted);"></p>
+                    </div>
+                </div>
+                <form id="rename-batch-form">
+                    <input type="hidden" id="rename-batch-id">
+                    <div class="input-group">
+                        <label for="rename-batch-name">New Batch Name</label>
+                        <div class="input-wrapper">
+                            <i class='bx bx-folder'></i>
+                            <input type="text" id="rename-batch-name" required placeholder="Enter new name" style="padding-left: 40px;">
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 10px; margin-top: 20px;">
+                        <button type="button" id="rename-batch-cancel" class="btn outline-btn" style="flex: 1;">Cancel</button>
+                        <button type="submit" class="btn primary-btn" style="flex: 1;"><i class='bx bx-check'></i> Rename</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Move Selected Applicants Modal (Admin) -->
+        <div id="move-applicants-modal" class="modal">
+            <div class="modal-content glass-panel" style="max-width: 400px;">
+                <span class="close-modal">&times;</span>
+                <h2>Move Selected Applicants</h2>
+                <form id="move-applicants-form" style="margin-top: 20px;">
+                    <div class="input-group">
+                        <label for="move-applicants-batch">Destination Batch</label>
+                        <div class="input-wrapper">
+                            <i class='bx bx-folder'></i>
+                            <select id="move-applicants-batch" required>
+                                <!-- Populated dynamically -->
+                            </select>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 10px; margin-top: 20px;">
+                        <button type="button" class="btn outline-btn close-btn-action" style="flex: 1;">Cancel</button>
+                        <button type="submit" class="btn primary-btn" style="flex: 1;"><i class='bx bx-check'></i> Move</button>
+                    </div>
                 </form>
             </div>
         </div>
 
 
 
+        <!-- Add Account Modal (Admin) -->
+        <div id="add-account-modal" class="modal">
+            <div class="modal-content glass-panel" style="max-width: 400px;">
+                <span class="close-modal">&times;</span>
+                <h2>Create Employee Account</h2>
+                <form id="add-account-form" style="margin-top: 20px;">
+                    <div class="input-group">
+                        <label for="new-account-fullname">Full Name</label>
+                        <div class="input-wrapper">
+                            <i class='bx bx-id-card'></i>
+                            <input type="text" id="new-account-fullname" required placeholder="Enter full name"
+                                style="padding-left: 40px;">
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label for="new-account-division">Division</label>
+                        <div class="input-wrapper">
+                            <i class='bx bx-git-branch'></i>
+                            <select id="new-account-division" required>
+                                <option value="" disabled selected>Select Division</option>
+                                <option value="Unassigned">Unassigned</option>
+                                <option value="LTID">Land Tenure Improvement Division (LTID)</option>
+                                <option value="PBDD">Program Beneficiaries Development Division (PBDD)</option>
+                                <option value="STOD">Support To Operations Division (STOD)</option>
+                                <option value="LD">Legal Division (LD)</option>
+                                <option value="PARAD">Provincial Agrarian Reform Adjudicator (PARAD)</option>
+                                <option value="PARPO I">Office of the PARPO I (PARPO I)</option>
+                                <option value="PARPO II">Office of the PARPO II (PARPO II)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label for="new-account-position">Position</label>
+                        <div class="input-wrapper">
+                            <i class='bx bx-briefcase'></i>
+                            <input type="text" id="new-account-position" required
+                                placeholder="Enter position (e.g., HRMO II)" style="padding-left: 40px;">
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label for="new-account-username">Username</label>
+                        <div class="input-wrapper">
+                            <i class='bx bx-user'></i>
+                            <input type="text" id="new-account-username" required placeholder="Choose a username"
+                                style="padding-left: 40px;">
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label for="new-account-password">Password</label>
+                        <div class="input-wrapper">
+                            <i class='bx bx-lock-alt'></i>
+                            <input type="password" id="new-account-password" required placeholder="Choose a password"
+                                style="padding-left: 40px;">
+                            <button type="button" class="toggle-password" tabindex="-1"><i
+                                    class='bx bx-show'></i></button>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn primary-btn" style="width: 100%; margin-top: 10px;">Create
+                        Account</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- View Password Modal (Admin) -->
+        <div id="view-password-modal" class="modal">
+            <div class="modal-content glass-panel" style="max-width: 400px;">
+                <span class="close-modal">&times;</span>
+                <h2>View Default Password</h2>
+                <div style="margin-top: 20px;">
+                    <div class="input-group">
+                        <label for="viewed-employee-fullname">Full Name</label>
+                        <div class="input-wrapper">
+                            <i class='bx bx-id-card'></i>
+                            <input type="text" id="viewed-employee-fullname" readonly style="padding-left: 40px;">
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label for="viewed-employee-username">Username</label>
+                        <div class="input-wrapper">
+                            <i class='bx bx-user'></i>
+                            <input type="text" id="viewed-employee-username" readonly style="padding-left: 40px;">
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label for="viewed-employee-password">Original/Default Password</label>
+                        <div class="input-wrapper">
+                            <i class='bx bx-lock-alt'></i>
+                            <input type="text" id="viewed-employee-password" readonly style="padding-left: 40px;">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Account Settings View -->
         <div id="settings-view" class="view">
+            <div class="bg-decorative">
+                <div class="blob blob-1"></div>
+                <div class="blob blob-2"></div>
+            </div>
             <nav class="navbar glass-panel">
-                <div class="nav-brand"><i class='bx bx-cog'></i> Account Settings</div>
+                <div class="nav-brand"><img src="logo.png" alt="DAR Logo" class="nav-logo"> Account Settings</div>
                 <div class="nav-user">
-                    <button id="settings-back" class="btn outline-btn"><i class='bx bx-arrow-back'></i> Back to Dashboard</button>
+                    <button id="settings-back" class="btn outline-btn"><i class='bx bx-arrow-back'></i> Back to
+                        Dashboard</button>
                 </div>
             </nav>
             <main class="dashboard-content">
@@ -369,34 +663,91 @@
                                 <input type="text" id="settings-position" required placeholder="Update your position">
                             </div>
                         </div>
-                        <div class="input-group">
-                            <label for="settings-password">New Password (Optional)</label>
+                        <div class="input-group" id="settings-division-group">
+                            <label for="settings-division">Division</label>
                             <div class="input-wrapper">
-                                <i class='bx bx-lock-alt'></i>
-                                <input type="password" id="settings-password" placeholder="Leave blank to keep current">
-                                <button type="button" class="toggle-password" tabindex="-1"><i class='bx bx-show'></i></button>
+                                <i class='bx bx-git-branch'></i>
+                                <input type="text" id="settings-division" readonly placeholder="Division">
                             </div>
                         </div>
-                        <button type="submit" class="btn primary-btn" style="width: 100%; margin-top: 10px;"><i class='bx bx-save'></i> Save Changes</button>
+                        <div class="input-group">
+                            <label for="settings-password" id="settings-password-label">New Password (Optional)</label>
+                            <div class="input-wrapper">
+                                <i class='bx bx-lock-alt'></i>
+                                <input type="password" id="settings-password" placeholder="">
+                                <button type="button" class="toggle-password" tabindex="-1"><i
+                                        class='bx bx-show'></i></button>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn primary-btn" style="width: 100%; margin-top: 10px;"><i
+                                class='bx bx-save'></i> Save Changes</button>
                     </form>
                     <hr class="settings-divider">
                     <div class="danger-zone">
                         <h3>Danger Zone</h3>
                         <p>Once you delete your account, there is no going back. Please be certain.</p>
-                        <button id="delete-account-btn" class="btn danger-btn" style="width: 100%; margin-top: 10px;"><i class='bx bx-trash'></i> Delete Account</button>
+                        <button id="delete-account-btn" class="btn danger-btn" style="width: 100%; margin-top: 10px;"><i
+                                class='bx bx-trash'></i> Delete Account</button>
                     </div>
                 </div>
             </main>
         </div>
 
+        <!-- Edit Employee Info Modal (Admin) -->
+        <div id="edit-employee-info-modal" class="modal">
+            <div class="modal-content glass-panel" style="max-width: 400px;">
+                <span class="close-modal">&times;</span>
+                <h2>Edit Employee Info</h2>
+                <form id="edit-employee-info-form" style="margin-top: 20px;">
+                    <input type="hidden" id="edit-employee-info-username">
+                    <div class="input-group">
+                        <label for="edit-employee-info-fullname">Full Name</label>
+                        <div class="input-wrapper">
+                            <i class='bx bx-id-card'></i>
+                            <input type="text" id="edit-employee-info-fullname" readonly
+                                style="padding-left: 40px; opacity: 0.65; cursor: not-allowed;">
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label for="edit-employee-info-division">Division</label>
+                        <div class="input-wrapper">
+                            <i class='bx bx-git-branch'></i>
+                            <select id="edit-employee-info-division" required>
+                                <option value="" disabled selected>Select Division</option>
+                                <option value="Unassigned">Unassigned</option>
+                                <option value="LTID">Land Tenure Improvement Division (LTID)</option>
+                                <option value="PBDD">Program Beneficiaries Development Division (PBDD)</option>
+                                <option value="STOD">Support To Operations Division (STOD)</option>
+                                <option value="LD">Legal Division (LD)</option>
+                                <option value="PARAD">Provincial Agrarian Reform Adjudicator (PARAD)</option>
+                                <option value="PARPO I">Office of the PARPO I (PARPO I)</option>
+                                <option value="PARPO II">Office of the PARPO II (PARPO II)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label for="edit-employee-info-position">Position</label>
+                        <div class="input-wrapper">
+                            <i class='bx bx-briefcase'></i>
+                            <input type="text" id="edit-employee-info-position" required
+                                placeholder="Enter position (e.g., HRMO II)" style="padding-left: 40px;">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn primary-btn" style="width: 100%; margin-top: 10px;"><i class='bx bx-save'></i> Save Changes</button>
+                </form>
+            </div>
+        </div>
+
         <!-- Custom Confirmation Modal (Message Window) -->
         <div id="confirm-modal" class="modal">
             <div class="modal-content glass-panel" style="max-width: 400px; text-align: center;">
-                <i id="confirm-icon" class='bx bx-question-mark' style="font-size: 4rem; color: var(--secondary-color); margin-bottom: 10px;"></i>
+                <i id="confirm-icon" class='bx bx-question-mark'
+                    style="font-size: 4rem; color: var(--secondary-color); margin-bottom: 10px;"></i>
                 <h2 id="confirm-title">Confirm Action</h2>
                 <p id="confirm-message" style="margin: 15px 0; color: var(--text-secondary);">Are you sure?</p>
                 <div style="display: flex; gap: 10px; justify-content: center; margin-top: 20px;">
                     <button id="confirm-cancel" class="btn outline-btn">Cancel</button>
+                    <button id="confirm-extra" class="btn outline-btn hidden">Extra</button>
                     <button id="confirm-ok" class="btn primary-btn">Confirm</button>
                 </div>
             </div>
@@ -407,14 +758,15 @@
     <!-- Notification Toast -->
     <div id="toast" class="toast"></div>
 
-    <!-- SheetJS (xlsx) for Excel Export -->
-    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <!-- SheetJS with styling support (xlsx-js-style) for Excel Export -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 
     <!-- Theme Toggle -->
     <button id="theme-toggle" class="theme-toggle-fixed" title="Toggle Dark/Light Mode">
         <i class='bx bx-moon'></i>
     </button>
 
-    <script src="app.js"></script>
+    <script type="module" src="js/main.js"></script>
 </body>
+
 </html>
